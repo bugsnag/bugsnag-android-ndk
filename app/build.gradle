@@ -18,7 +18,7 @@ model {
             }
         }
         ndk {
-            moduleName "test-android-jni"
+            moduleName "jni-entry-point"
             ldLibs.addAll(['log'])
 //            ldFlags.add("")
 //            toolchain = "clang"

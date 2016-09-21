@@ -9,12 +9,18 @@ import com.bugsnag.android.Bugsnag;
 
 public class MainActivity extends AppCompatActivity {
 
+    static {
+        System.loadLibrary("jni-entry-point");
+    }
+    public native void causeFpe();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         Bugsnag.init(this);
+
         Button clickButton = (Button) findViewById(R.id.notifyButton);
         clickButton.setOnClickListener( new View.OnClickListener() {
             @Override
@@ -23,6 +29,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        clickButton = (Button) findViewById(R.id.fpeButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeFpe();
+            }
+        });
 
     }
 }
