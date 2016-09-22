@@ -13,6 +13,7 @@ public class MainActivity extends AppCompatActivity {
         System.loadLibrary("jni-entry-point");
     }
     public native void causeFpe();
+    public native void causeNpe();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +35,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 causeFpe();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.npeButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeNpe();
             }
         });
 

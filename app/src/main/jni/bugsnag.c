@@ -7,12 +7,28 @@
 #include <signal.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 // Globals
 JNIEnv *g_env;
 struct sigaction sa;
-struct sigaction sa_oldSIGFPE;
-void* uframes[FRAMES_MAX];
+
+/* Signals to be caught. */
+#define SIG_CATCH_COUNT 6
+static const int native_sig_catch[SIG_CATCH_COUNT + 1]
+        = { SIGABRT, SIGILL, SIGTRAP, SIGBUS, SIGFPE, SIGSEGV };
+/* Maximum value of a caught signal. */
+#define SIG_NUMBER_MAX 32
+
+struct sigaction *sa_old;
+
+
+typedef struct native_code_handler_struct {
+    void *uframes[FRAMES_MAX];
+} native_code_handler_struct;
+
+static native_code_handler_struct *g_native_code;
+
 
 /**
  * Gets the stack trace for the given depth
@@ -20,21 +36,27 @@ void* uframes[FRAMES_MAX];
  * TODO: This probably only works on Android 5+ where libunwind is included
  */
 static int unwind_stack(void** frames, int max_depth) {
+    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack");
+
     void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
     if (libunwind != NULL) {
         int (*backtrace)(void **, int) = dlsym(libunwind, "unw_backtrace");
 
         if (backtrace != NULL) {
+            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack 2");
+
             int nb = backtrace(frames, max_depth);
+
+            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack 3");
             if (nb > 0) {
               return nb;
             }
         } else {
-            __android_log_print(ANDROID_LOG_VERBOSE, "TestApp", "symbols not found in libunwind.so");
+            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "symbols not found in libunwind.so");
         }
         dlclose(libunwind);
     } else {
-        __android_log_print(ANDROID_LOG_VERBOSE, "TestApp", "libunwind.so could not be loaded");
+        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libunwind.so could not be loaded");
     }
     return -1;
 }
@@ -114,45 +136,60 @@ char* getSignalName(int code) {
  * Handles signals when errors occur and notifies Bugsnag
  */
 static void signal_handler(int code, struct siginfo* si, void* sc) {
-    __android_log_print(ANDROID_LOG_VERBOSE, "TestApp", "In signal_handler with signal %d", si->si_signo);
+    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
-    int frames_size = unwind_stack(uframes, FRAMES_MAX);
+    int frames_size = unwind_stack(g_native_code->uframes, FRAMES_MAX);
+
+    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "after unwind frames = %d", frames_size);
 
     // Ignore the first 3 frames
     int project_frames = frames_size - FRAMES_TO_IGNORE;
 
-    jobjectArray trace = (*g_env)->NewObjectArray(g_env, project_frames, (*g_env)->FindClass(g_env, "java/lang/StackTraceElement"), NULL);
     jclass traceClass = (*g_env)->FindClass(g_env, "java/lang/StackTraceElement");
-    jmethodID traceConstructor = (*g_env)->GetMethodID(g_env, traceClass, "<init>", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
+    jmethodID traceConstructor = (*g_env)->GetMethodID(g_env, traceClass, "<init>",
+                                                       "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
+    jobjectArray trace = (*g_env)->NewObjectArray(g_env,
+                                                  0,
+                                                  (*g_env)->FindClass(g_env, "java/lang/StackTraceElement"),
+                                                  NULL);
 
-    // Create a stack frame element array
-    int i;
-    for(i = 0; i < project_frames ; i++) {
-        void * const addr = uframes[i + FRAMES_TO_IGNORE];
+    if (project_frames > 0) {
+        // Create stack trace array
+        trace = (*g_env)->NewObjectArray(g_env,
+                                         project_frames,
+                                        (*g_env)->FindClass(g_env, "java/lang/StackTraceElement"),
+                                        NULL);
 
-        Dl_info info;
-        if (dladdr(addr, &info) != 0 && info.dli_fname != NULL) {
+        // populate stack frame element array
+        int i;
+        for (i = 0; i < project_frames; i++) {
+            void *const addr = g_native_code->uframes[i + FRAMES_TO_IGNORE];
 
-            // Attempt to calculate the line numbers TODO: this seems to produce incorrect results
-            uintptr_t near = (uintptr_t) info.dli_saddr;
-            uintptr_t offs =  (uintptr_t) uframes[i + FRAMES_TO_IGNORE] - near;
+            Dl_info info;
+            if (dladdr(addr, &info) != 0 && info.dli_fname != NULL) {
 
-            // Build up a stack frame
-            jstring class = (*g_env)->NewStringUTF(g_env, "");
-            jstring filename = (*g_env)->NewStringUTF(g_env, info.dli_fname);
-            jstring methodName = (*g_env)->NewStringUTF(g_env, info.dli_sname == NULL ? "(null)" : info.dli_sname);
-            jint lineNumber = (int)offs;
+                // Attempt to calculate the line numbers TODO: this seems to produce incorrect results
+                uintptr_t near = (uintptr_t) info.dli_saddr;
+                uintptr_t offs = (uintptr_t) g_native_code->uframes[i + FRAMES_TO_IGNORE] - near;
 
-            jobject frame = (*g_env)->NewObject(g_env,
-                                                 traceClass,
-                                                 traceConstructor,
-                                                 class,
-                                                 methodName,
-                                                 filename,
-                                                 lineNumber);
+                // Build up a stack frame
+                jstring class = (*g_env)->NewStringUTF(g_env, "");
+                jstring filename = (*g_env)->NewStringUTF(g_env, info.dli_fname);
+                jstring methodName = (*g_env)->NewStringUTF(g_env, info.dli_sname == NULL ? "(null)"
+                                                                                          : info.dli_sname);
+                jint lineNumber = (int) offs;
+
+                jobject frame = (*g_env)->NewObject(g_env,
+                                                    traceClass,
+                                                    traceConstructor,
+                                                    class,
+                                                    methodName,
+                                                    filename,
+                                                    lineNumber);
 
 
-            (*g_env)->SetObjectArrayElement(g_env, trace, i, frame);
+                (*g_env)->SetObjectArrayElement(g_env, trace, i, frame);
+            }
         }
     }
 
@@ -181,9 +218,13 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
     jmethodID method = (*g_env)->GetStaticMethodID(g_env, objclass, "notify", "(Ljava/lang/String;Ljava/lang/String;[Ljava/lang/StackTraceElement;Lcom/bugsnag/android/Severity;Lcom/bugsnag/android/MetaData;)V");
     (*g_env)->CallStaticVoidMethod(g_env, objclass, method, name, message, trace, severity, metaData);
 
+    // Wait for the Bugsnag to be send TODO: remove this
+    sleep(1);
+
+
     /* Call previous handler. */
-    if (si->si_signo == SIGFPE) {
-        sa_oldSIGFPE.sa_sigaction(code, si, sc);
+    if (si->si_signo >= 0 && si->si_signo < SIG_NUMBER_MAX) {
+        sa_old[si->si_signo].sa_sigaction(code, si, sc);
     }
 }
 
@@ -193,14 +234,22 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
 int setupBugsnag(JNIEnv *env) {
     g_env = env;
 
+    g_native_code = calloc(sizeof(native_code_handler_struct), 1);
+
     // create a signal handler
     memset(&sa, 0, sizeof(sa));
     sigemptyset(&sa.sa_mask);
     sa.sa_sigaction = signal_handler;
     sa.sa_flags = SA_SIGINFO;
 
+    sa_old = calloc(sizeof(struct sigaction), SIG_NUMBER_MAX);
+
     // TODO: add more signals and test them
-    sigaction(SIGFPE, &sa, &sa_oldSIGFPE);
+    int i;
+    for (i = 0; i < SIG_CATCH_COUNT; i++) {
+        const int sig = native_sig_catch[i];
+        sigaction(sig, &sa, &sa_old[sig]);
+    }
 
     return 0;
 }
@@ -210,7 +259,14 @@ int setupBugsnag(JNIEnv *env) {
  */
 void tearDownBugsnag() {
     // replace signal handler with old one again
-    sigaction(SIGFPE, &sa_oldSIGFPE, &sa);
+    int i;
+    for(i = 0; i < SIG_CATCH_COUNT; i++) {
+        int sig = native_sig_catch[i];
+        sigaction(sig, &sa_old[sig], NULL);
+    }
+
     free(&sa);
+    free(&g_native_code);
+    free(&sa_old);
 }
 
