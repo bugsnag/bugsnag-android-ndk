@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <unwind.h>
 
 // Globals
 JNIEnv *g_env;
@@ -30,35 +31,33 @@ typedef struct native_code_handler_struct {
 static native_code_handler_struct *g_native_code;
 
 
-/**
- * Gets the stack trace for the given depth
- * and puts it in the given frames pointer
- * TODO: This probably only works on Android 5+ where libunwind is included
- */
-static int unwind_stack(void** frames, int max_depth) {
-    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack");
+struct BacktraceState
+{
+    void** current;
+    void** end;
+};
 
-    void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
-    if (libunwind != NULL) {
-        int (*backtrace)(void **, int) = dlsym(libunwind, "unw_backtrace");
 
-        if (backtrace != NULL) {
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack 2");
-
-            int nb = backtrace(frames, max_depth);
-
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "in unwind_stack 3");
-            if (nb > 0) {
-              return nb;
-            }
+static _Unwind_Reason_Code unwindCallback(struct _Unwind_Context* context, void* arg)
+{
+    struct BacktraceState* state = (struct BacktraceState*)arg;
+    uintptr_t pc = _Unwind_GetIP(context);
+    if (pc) {
+        if (state->current == state->end) {
+            return _URC_END_OF_STACK;
         } else {
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "symbols not found in libunwind.so");
+            *state->current++ = (void*)pc;
         }
-        dlclose(libunwind);
-    } else {
-        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libunwind.so could not be loaded");
     }
-    return -1;
+    return _URC_NO_REASON;
+}
+
+size_t captureBacktrace(void** buffer, size_t max)
+{
+    struct BacktraceState state = {buffer, buffer + max};
+    _Unwind_Backtrace(unwindCallback, &state);
+
+    return state.current - buffer;
 }
 
 /**
@@ -138,7 +137,7 @@ char* getSignalName(int code) {
 static void signal_handler(int code, struct siginfo* si, void* sc) {
     __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
-    int frames_size = unwind_stack(g_native_code->uframes, FRAMES_MAX);
+    int frames_size = (int)captureBacktrace(g_native_code->uframes, FRAMES_MAX);
 
     __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "after unwind frames = %d", frames_size);
 
