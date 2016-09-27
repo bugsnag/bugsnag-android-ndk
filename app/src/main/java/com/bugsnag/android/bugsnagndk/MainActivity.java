@@ -18,6 +18,10 @@ public class MainActivity extends AppCompatActivity {
     }
     public native void causeFpe();
     public native void causeNpe();
+    public native void causeBus();
+    public native void causeAbort();
+    public native void causeTrap();
+    public native void causeIll();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +55,38 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 causeNpe();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.busButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeBus();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.abortButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeAbort();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.trapButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeTrap();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.illButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeIll();
             }
         });
 

@@ -41,4 +41,46 @@
         android:id="@+id/npeButton"
         android:layout_alignTop="@+id/fpeButton"
         android:layout_centerHorizontal="true" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Native BUS"
+        android:id="@+id/busButton"
+        android:layout_below="@+id/fpeButton"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="27dp" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Native Abort"
+        android:id="@+id/abortButton"
+        android:layout_alignBottom="@+id/busButton"
+        android:layout_alignLeft="@+id/npeButton"
+        android:layout_alignStart="@+id/npeButton" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Native Trap"
+        android:id="@+id/trapButton"
+        android:layout_marginTop="30dp"
+        android:layout_below="@+id/busButton"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Native ILL"
+        android:id="@+id/illButton"
+        android:layout_alignTop="@+id/trapButton"
+        android:layout_centerHorizontal="true" />
+
 </RelativeLayout>

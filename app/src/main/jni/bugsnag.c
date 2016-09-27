@@ -12,10 +12,10 @@
 // Globals
 /* signals to be handled */
 static const int native_sig_catch[SIG_CATCH_COUNT + 1]
-        = { SIGABRT, SIGILL, SIGTRAP, SIGBUS, SIGFPE, SIGSEGV };
+        = { SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGSEGV };
 
 /* the Bugsnag signal handler */
-struct sigaction g_sigaction;
+struct sigaction *g_sigaction;
 
 /* the old signal handler array */
 struct sigaction *g_sigaction_old;
@@ -282,7 +282,7 @@ int startsWith(const char *pre, const char *str)
  * Handles signals when errors occur and writes a file to the Bugsnag error cache
  */
 static void signal_handler(int code, struct siginfo* si, void* sc) {
-    //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
+    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
     int frames_size = (int)capture_backtrace(g_native_code->uframes, FRAMES_MAX);
 
@@ -604,16 +604,17 @@ int setupBugsnag(JNIEnv *env) {
     populate_error_details(env);
 
     // create a signal handler
-    memset(&g_sigaction, 0, sizeof(g_sigaction));
-    sigemptyset(&g_sigaction.sa_mask);
-    g_sigaction.sa_sigaction = signal_handler;
-    g_sigaction.sa_flags = SA_SIGINFO;
+    g_sigaction = calloc(sizeof(struct sigaction), 1);
+    memset(g_sigaction, 0, sizeof(struct sigaction));
+    sigemptyset(&g_sigaction->sa_mask);
+    g_sigaction->sa_sigaction = signal_handler;
+    g_sigaction->sa_flags = SA_SIGINFO;
 
     g_sigaction_old = calloc(sizeof(struct sigaction), SIG_NUMBER_MAX);
     int i;
     for (i = 0; i < SIG_CATCH_COUNT; i++) {
         const int sig = native_sig_catch[i];
-        sigaction(sig, &g_sigaction, &g_sigaction_old[sig]);
+        sigaction(sig, g_sigaction, &g_sigaction_old[sig]);
     }
 
     return 0;
@@ -630,9 +631,9 @@ void tearDownBugsnag() {
         sigaction(sig, &g_sigaction_old[sig], NULL);
     }
 
-    free(&g_sigaction);
-    free(&g_native_code);
-    free(&g_bugsnag_error);
-    free(&g_sigaction_old);
+    free(g_sigaction);
+    free(g_native_code);
+    free(g_bugsnag_error);
+    free(g_sigaction_old);
 }
 
