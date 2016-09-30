@@ -1,13 +1,12 @@
 #include <jni.h>
 #include <android/log.h>
 #include "bugsnag.h"
-
-// Platform specific libraries
 #include <signal.h>
 #include <stdio.h>
 #include <dlfcn.h>
-#include <unwind.h>
 #include <time.h>
+#include "headers/libunwind.h"
+
 
 // Globals
 /* signals to be handled */
@@ -27,31 +26,97 @@ struct bugsnag_error *g_bugsnag_error;
 static native_code_handler_struct *g_native_code;
 
 /**
- * Unwinds the stack trace for given context
+ * Gets the stack trace for the given depth
+ * and puts it in the given frames pointer
+ * TODO: This probably only works on Android 5+ where libunwind is included
  */
-static _Unwind_Reason_Code unwind_callback(struct _Unwind_Context* context, void* arg)
-{
-    struct backtrace_state* state = (struct backtrace_state*)arg;
-    uintptr_t pc = _Unwind_GetIP(context);
-    if (pc) {
-        if (state->current == state->end) {
-            return _URC_END_OF_STACK;
-        } else {
-            *state->current++ = (void*)pc;
-        }
+static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
+
+    void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
+    if (libunwind != NULL) {
+        int (*getcontext) (ucontext_t*);// = dlsym(libunwind, "_Ux86_getcontext");
+        int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
+        int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
+        int (*get_reg) (unw_cursor_t *, unw_regnum_t, unw_word_t *);// = dlsym(libunwind, "_Ux86_get_reg");
+
+        unw_context_t uwc;
+        unw_cursor_t cursor;
+
+#if (defined(__arm__))
+        getcontext = dlsym(libunwind, "_Uarm_getcontext");
+        init_local = dlsym(libunwind, "_Uarm_init_local");
+        step = dlsym(libunwind, "_Uarm_step");
+        get_reg = dlsym(libunwind, "_Uarm_get_reg");
+
+        //ucontext_t* context = (ucontext_t*)reserved;
+        unw_tdep_context_t *unw_ctx = (unw_tdep_context_t*)&uwc;
+        mcontext_t* sig_ctx = &uc->uc_mcontext;
+        //we need to store all the general purpose registers so that libunwind can resolve
+        //    the stack correctly, so we read them from the sigcontext into the unw_context
+        unw_ctx->regs[UNW_ARM_R0] = sig_ctx->arm_r0;
+        unw_ctx->regs[UNW_ARM_R1] = sig_ctx->arm_r1;
+        unw_ctx->regs[UNW_ARM_R2] = sig_ctx->arm_r2;
+        unw_ctx->regs[UNW_ARM_R3] = sig_ctx->arm_r3;
+        unw_ctx->regs[UNW_ARM_R4] = sig_ctx->arm_r4;
+        unw_ctx->regs[UNW_ARM_R5] = sig_ctx->arm_r5;
+        unw_ctx->regs[UNW_ARM_R6] = sig_ctx->arm_r6;
+        unw_ctx->regs[UNW_ARM_R7] = sig_ctx->arm_r7;
+        unw_ctx->regs[UNW_ARM_R8] = sig_ctx->arm_r8;
+        unw_ctx->regs[UNW_ARM_R9] = sig_ctx->arm_r9;
+        unw_ctx->regs[UNW_ARM_R10] = sig_ctx->arm_r10;
+        unw_ctx->regs[UNW_ARM_R11] = sig_ctx->arm_fp;
+        unw_ctx->regs[UNW_ARM_R12] = sig_ctx->arm_ip;
+        unw_ctx->regs[UNW_ARM_R13] = sig_ctx->arm_sp;
+        unw_ctx->regs[UNW_ARM_R14] = sig_ctx->arm_lr;
+        unw_ctx->regs[UNW_ARM_R15] = sig_ctx->arm_pc;
+#elif (defined(__x86_64__))
+        getcontext = dlsym(libunwind, "_Ux86_64_getcontext");
+        init_local = dlsym(libunwind, "_Ux86_64_init_local");
+        step = dlsym(libunwind, "_Ux86_64_step");
+        get_reg = dlsym(libunwind, "_Ux86_64_get_reg");
+
+        uwc = *(unw_context_t*)uc;
+#elif (defined(__i386))
+        getcontext = dlsym(libunwind, "_Ux86_getcontext");
+        init_local = dlsym(libunwind, "_Ux86_init_local");
+        step = dlsym(libunwind, "_Ux86_step");
+        get_reg = dlsym(libunwind, "_Ux86_get_reg");
+
+        uwc = *(unw_context_t*)uc;
+//#elif defined(__aarch64__)
+//#elif (defined (__ppc__)) || (defined (__powerpc__))
+//#elif (defined(__hppa__))
+//#elif (defined(__sparc__) && defined (__arch64__))
+//#elif (defined(__sparc__) && !defined (__arch64__))
+//#elif (defined(__mips__))
+#else
+        // TODO: fail here or add more supported arches
+        getcontext = dlsym(libunwind, "_Ux86_getcontext");
+        init_local = dlsym(libunwind, "_Ux86_init_local");
+        step = dlsym(libunwind, "_Ux86_step");
+        get_reg = dlsym(libunwind, "_Ux86_get_reg");
+
+        getcontext(&uwc);
+#endif
+
+        init_local(&cursor, &uwc);
+
+        unw_word_t ip, sp;
+        int count = 0;
+        do {
+            get_reg(&cursor, UNW_REG_IP, &ip);
+            get_reg(&cursor, UNW_REG_SP, &sp);
+            frames[count] = (void*)ip;
+            count++;
+        } while(step(&cursor) > 0 && count < max_depth);
+
+        dlclose(libunwind);
+
+        return count;
+    } else {
+        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libunwind.so could not be loaded");
     }
-    return _URC_NO_REASON;
-}
-
-/**
- * Gets the stack trace
- */
-size_t capture_backtrace(void** buffer, size_t max)
-{
-    struct backtrace_state state = {buffer, buffer + max};
-    _Unwind_Backtrace(unwind_callback, &state);
-
-    return state.current - buffer;
+    return -1;
 }
 
 /**
@@ -282,9 +347,10 @@ int startsWith(const char *pre, const char *str)
  * Handles signals when errors occur and writes a file to the Bugsnag error cache
  */
 static void signal_handler(int code, struct siginfo* si, void* sc) {
-    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
+//    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
-    int frames_size = (int)capture_backtrace(g_native_code->uframes, FRAMES_MAX);
+    ucontext_t *const uc = (ucontext_t*) sc;
+    int frames_size = unwind_stack(g_native_code->uframes, FRAMES_MAX, uc);
 
     // Create an exception message and class
     sprintf(g_bugsnag_error->exception.message,"Fatal signal from native: %d (%s), code %d", si->si_signo, get_signal_name(si->si_signo), si->si_code);

@@ -11,7 +11,7 @@
 #define FRAMES_MAX 16
 
 /* Number of frames to ignore (part of handler code) */
-#define FRAMES_TO_IGNORE 2
+#define FRAMES_TO_IGNORE 0
 
 /* Signals to be caught. */
 #define SIG_CATCH_COUNT 6
@@ -97,13 +97,6 @@ struct bugsnag_error {
     // TODO: threads??
     const char* error_store_path;
 } bugsnag_error_struct;
-
-/* structure to store backtrace information */
-struct backtrace_state
-{
-    void** current;
-    void** end;
-};
 
 /**
  * Adds the Bugsnag signal handler
