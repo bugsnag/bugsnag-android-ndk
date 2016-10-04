@@ -22,6 +22,13 @@ public class MainActivity extends AppCompatActivity {
     public native void causeAbort();
     public native void causeTrap();
     public native void causeIll();
+    public native void causeCppFpe();
+    public native void causeCppNpe();
+    public native void causeCppBus();
+    public native void causeCppAbort();
+    public native void causeCppTrap();
+    public native void causeCppIll();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,5 +97,54 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+        clickButton = (Button) findViewById(R.id.cppFpeButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppFpe();
+            }
+        });
+
+
+        clickButton = (Button) findViewById(R.id.cppNpeButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppNpe();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.cppBusButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppBus();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.cppAbortButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppAbort();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.cppTrapButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppTrap();
+            }
+        });
+
+        clickButton = (Button) findViewById(R.id.cppIllButton);
+        clickButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                causeCppIll();
+            }
+        });
     }
 }

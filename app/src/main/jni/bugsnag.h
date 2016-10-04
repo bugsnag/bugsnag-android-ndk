@@ -13,15 +13,22 @@
 /* Maximum value of a caught signal. */
 #define SIG_NUMBER_MAX 32
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Adds the Bugsnag signal handler
  */
-extern int setupBugsnag(JNIEnv*);
+extern int setupBugsnag(JNIEnv *);
 
 /**
  * Removes the Bugsnag signal handler
  */
 extern void tearDownBugsnag();
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
