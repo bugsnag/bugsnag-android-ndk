@@ -29,30 +29,9 @@ int cause_null_pointer_error() {
 }
 
 int cause_bus_error() {
-    //raise(SIGBUS);
+    raise(SIGBUS);
 
-    int *iptr;
-    char *cptr;
-
-#if defined(__GNUC__)
-# if defined(__i386__)
-    /* Enable Alignment Checking on x86 */
-    __asm__("pushf\norl $0x40000,(%esp)\npopf");
-# elif defined(__x86_64__)
-    /* Enable Alignment Checking on x86_64 */
-    __asm__("pushf\norl $0x40000,(%rsp)\npopf");
-# endif
-#endif
-
-    /* malloc() always provides aligned memory */
-    cptr = (char*)malloc(sizeof(int) + 1);
-
-    /* Increment the pointer by one, making it misaligned */
-    iptr = (int *) ++cptr;
-
-    /* Dereference it as an int pointer, causing an unaligned access */
-    *iptr = 42;
-
+    // TODO: figure out how to cause this error properly
     return 0;
 }
 
@@ -80,61 +59,61 @@ int cause_ill_error() {
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppFpe(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_floating_point_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppNpe(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_null_pointer_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppBus(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_bus_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppAbort(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_abort_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppTrap(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_trap_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_bugsnagndk_MainActivity_causeCppIll(JNIEnv *env, jobject instance) {
 
-    setupBugsnag(env);
+    //setupBugsnag(env);
 
     cause_ill_error();
 
-    tearDownBugsnag();
+    //tearDownBugsnag();
 }
 
 

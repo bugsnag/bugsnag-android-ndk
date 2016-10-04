@@ -8,10 +8,17 @@
 #include "headers/libunwind.h"
 #include "bugsnag_common.h"
 
+/* Structure to store unwound frame */
+typedef struct unwind_struct_frame {
+    void *frame_pointer;
+    char method[1024];
+    unw_word_t offset;
+} unwind_struct_frame;
+
 /* Structure to store unwound frames */
-typedef struct native_code_handler_struct {
-    void *uframes[FRAMES_MAX];
-} native_code_handler_struct;
+typedef struct unwind_struct {
+    unwind_struct_frame frames[FRAMES_MAX];
+} unwind_struct;
 
 // Globals
 /* signals to be handled */
@@ -28,7 +35,7 @@ struct sigaction *g_sigaction_old;
 struct bugsnag_error *g_bugsnag_error;
 
 /* structure for storing the unwound stack trace */
-static native_code_handler_struct *g_native_code;
+unwind_struct *g_native_code;
 
 /**
  * Get the program counter, given a pointer to a ucontext_t context.
@@ -62,7 +69,7 @@ uintptr_t get_pc_from_ucontext(const ucontext_t *uc) {
  * and puts it in the given frames pointer
  * TODO: This probably only works on Android 5+ where libunwind is included
  */
-static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
+static int unwind_stack(unwind_struct* unwind, int max_depth, ucontext_t* uc) {
 
     void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
     if (libunwind != NULL) {
@@ -70,6 +77,7 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
         int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
         int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
         int (*get_reg) (unw_cursor_t *, unw_regnum_t, unw_word_t *);// = dlsym(libunwind, "_Ux86_get_reg");
+        int (*get_proc_name) (unw_cursor_t *, char *, size_t, unw_word_t *);
 
         unw_context_t uwc;
         unw_cursor_t cursor;
@@ -79,6 +87,7 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
         init_local = dlsym(libunwind, "_Uarm_init_local");
         step = dlsym(libunwind, "_Uarm_step");
         get_reg = dlsym(libunwind, "_Uarm_get_reg");
+        get_proc_name = dlsym(libunwind, "_Uarm_get_proc_name");
 
         //ucontext_t* context = (ucontext_t*)reserved;
         unw_tdep_context_t *unw_ctx = (unw_tdep_context_t*)&uwc;
@@ -106,6 +115,7 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
         init_local = dlsym(libunwind, "_Ux86_64_init_local");
         step = dlsym(libunwind, "_Ux86_64_step");
         get_reg = dlsym(libunwind, "_Ux86_64_get_reg");
+        get_proc_name = dlsym(libunwind, "_Ux86_64_get_proc_name");
 
         uwc = *(unw_context_t*)uc;
 #elif (defined(__i386))
@@ -113,6 +123,7 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
         init_local = dlsym(libunwind, "_Ux86_init_local");
         step = dlsym(libunwind, "_Ux86_step");
         get_reg = dlsym(libunwind, "_Ux86_get_reg");
+        get_proc_name = dlsym(libunwind, "_Ux86_get_proc_name");
 
         uwc = *(unw_context_t*)uc;
 //#elif defined(__aarch64__)
@@ -127,17 +138,25 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
         init_local = NULL;
         step = NULL;
         get_reg = NULL;
+        get_proc_name = NULL;
 #endif
+
+        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk","get_proc_name %p", get_proc_name);
 
         if (init_local != NULL) {
             init_local(&cursor, &uwc);
 
             unw_word_t ip, sp;
+
             int count = 0;
             do {
+                unwind_struct_frame *frame = &unwind->frames[count];
+
                 get_reg(&cursor, UNW_REG_IP, &ip);
                 get_reg(&cursor, UNW_REG_SP, &sp);
-                frames[count] = (void*)ip;
+                get_proc_name(&cursor, frame->method, 1024, &frame->offset);
+
+                frame->frame_pointer = (void*)ip;
                 count++;
             } while(step(&cursor) > 0 && count < max_depth);
 
@@ -146,7 +165,7 @@ static int unwind_stack(void** frames, int max_depth, ucontext_t* uc) {
             return count;
         } else {
             // Just return a single stack frame here
-            frames[0] = (void*)get_pc_from_ucontext(uc);
+            unwind->frames[0].frame_pointer = (void*)get_pc_from_ucontext(uc);
             return 1;
         }
     } else {
@@ -198,7 +217,7 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
     __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
     ucontext_t *const uc = (ucontext_t*) sc;
-    int frames_size = unwind_stack(g_native_code->uframes, FRAMES_MAX, uc);
+    int frames_size = unwind_stack(g_native_code, FRAMES_MAX, uc);
 
     // Create an exception message and class
     sprintf(g_bugsnag_error->exception.message,"Fatal signal from native: %d (%s), code %d", si->si_signo, get_signal_name(si->si_signo), si->si_code);
@@ -213,21 +232,34 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
         // populate stack frame element array
         int i;
         for (i = 0; i < project_frames; i++) {
-            void *const addr = g_native_code->uframes[i + FRAMES_TO_IGNORE];
+            unwind_struct_frame *unwind_frame = &g_native_code->frames[i + FRAMES_TO_IGNORE];
 
             Dl_info info;
-            if (dladdr(addr, &info) != 0 && info.dli_fname != NULL) {
+            if (dladdr(unwind_frame->frame_pointer, &info) != 0 && info.dli_fname != NULL) {
 
                 // Check that this isn't a system file
                 if (!startsWith("/system/", info.dli_fname)) {
+                    struct bugsnag_stack_frame* bugsnag_frame = &g_bugsnag_error->exception.stack_trace[frames_used];
 
-                    // Attempt to calculate the line numbers TODO: this seems to produce slightly incorrect results
-                    uintptr_t near = (uintptr_t) info.dli_saddr;
-                    uintptr_t offs = (uintptr_t) g_native_code->uframes[i + FRAMES_TO_IGNORE] - near;
+                    bugsnag_frame->file = info.dli_fname;
 
-                    g_bugsnag_error->exception.stack_trace[frames_used].file = info.dli_fname;
-                    g_bugsnag_error->exception.stack_trace[frames_used].method = info.dli_sname;
-                    g_bugsnag_error->exception.stack_trace[frames_used].line_number = (int)offs;
+                    // use the method from unwind if there is one
+                    if (strlen(unwind_frame->method) > 1) {
+                        bugsnag_frame->method = unwind_frame->method;
+                    } else {
+                        bugsnag_frame->method = info.dli_sname;
+                    }
+
+                    // use the offset from unwind if there is one
+                    if (unwind_frame->offset != 0) {
+                        bugsnag_frame->line_number = (int) unwind_frame->offset;
+                    } else {
+                        // Attempt to calculate the line numbers TODO: this seems to produce slightly incorrect results
+                        uintptr_t near = (uintptr_t) info.dli_saddr;
+                        uintptr_t offs = (uintptr_t) unwind_frame->frame_pointer - near;
+
+                        bugsnag_frame->line_number = (int)offs;
+                    }
 
                     frames_used++;
                 }
@@ -261,7 +293,9 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
  * Adds the Bugsnag signal handler
  */
 int setupBugsnag(JNIEnv *env) {
-    g_native_code = calloc(sizeof(native_code_handler_struct), 1);
+    g_native_code = calloc(sizeof(unwind_struct), 1);
+    memset(g_native_code, 0, sizeof(struct unwind_struct));
+
     g_bugsnag_error = calloc(sizeof(bugsnag_error_struct), 1);
 
     populate_error_details(env, g_bugsnag_error);
@@ -281,6 +315,11 @@ int setupBugsnag(JNIEnv *env) {
     }
 
     return 0;
+}
+
+
+JNIEXPORT void JNICALL Java_com_bugsnag_android_bugsnagndk_MainActivity_setupBugsnag (JNIEnv *env, jobject instance) {
+    setupBugsnag(env);
 }
 
 /**

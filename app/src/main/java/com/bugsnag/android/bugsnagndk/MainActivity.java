@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     public native void causeCppTrap();
     public native void causeCppIll();
 
+    public native void setupBugsnag();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
 
         Bugsnag.init(this, config);
         Bugsnag.setUser("12345", "test@example.com", "Mr Example");
+
+        setupBugsnag();
 
         Button clickButton = (Button) findViewById(R.id.notifyButton);
         clickButton.setOnClickListener( new View.OnClickListener() {
