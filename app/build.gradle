@@ -6,7 +6,7 @@ model {
 
         defaultConfig {
             applicationId "com.bugsnag.android.bugsnagndk"
-            minSdkVersion.apiLevel 15
+            minSdkVersion.apiLevel 10
             targetSdkVersion.apiLevel 24
             versionCode 1
             versionName "1.0"
@@ -29,7 +29,7 @@ model {
 //            debuggable = false
 //            renderscriptNdkMode = false
 //            stl = "system"
-//            platformVersion = 15
+            platformVersion = 10
         }
     }
 }
