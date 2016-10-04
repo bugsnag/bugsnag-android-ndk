@@ -4,7 +4,7 @@
 #include "bugsnag.h"
 #include <signal.h>
 #include <stdlib.h>
-
+#include <android/log.h>
 
 
 int cause_floating_point_error() {
