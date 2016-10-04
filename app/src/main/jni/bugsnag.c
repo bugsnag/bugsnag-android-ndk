@@ -6,7 +6,7 @@
 #include <dlfcn.h>
 #include <time.h>
 #include "headers/libunwind.h"
-#include "bugsnag_common.h"
+#include "bugsnag_error.h"
 
 /* Structure to store unwound frame */
 typedef struct unwind_struct_frame {
@@ -20,13 +20,15 @@ typedef struct unwind_struct {
     unwind_struct_frame frames[FRAMES_MAX];
 } unwind_struct;
 
-typedef struct map_info_t map_info_t;
 /* Extracted from Android's include/corkscrew/backtrace.h */
+typedef struct map_info_t map_info_t;
+
 typedef struct {
     uintptr_t absolute_pc;
     uintptr_t stack_top;
     size_t stack_size;
 } backtrace_frame_t;
+
 typedef struct {
     uintptr_t relative_pc;
     uintptr_t relative_symbol_addr;
@@ -81,55 +83,62 @@ uintptr_t get_pc_from_ucontext(const ucontext_t *uc) {
 }
 
 /**
- * Gets the stack trace for the given depth
- * and puts it in the given frames pointer
- * TODO: This probably only works on Android 5+ where libunwind is included
+ * Just returns the first frame in the stack as we couldn't find a library to do it
  */
-static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+int unwind_basic(unwind_struct* unwind, void* sc) {
+    ucontext_t *const uc = (ucontext_t*) sc;
+
+    // Just return a single stack frame here
+    unwind->frames[0].frame_pointer = (void*)get_pc_from_ucontext(uc);
+    return 1;
+}
+
+/**
+ * Uses libcorkscrew to unwind the stacktrace
+ * This should work on android greater than 5
+ */
+int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+    int (*getcontext) (ucontext_t*);// = dlsym(libunwind, "_Ux86_getcontext");
+    int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
+    int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
+    int (*get_reg) (unw_cursor_t *, unw_regnum_t, unw_word_t *);// = dlsym(libunwind, "_Ux86_get_reg");
+    int (*get_proc_name) (unw_cursor_t *, char *, size_t, unw_word_t *);
+
+    unw_context_t uwc;
+    unw_cursor_t cursor;
 
     ucontext_t *const uc = (ucontext_t*) sc;
 
-    void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
-    if (libunwind != NULL) {
-        int (*getcontext) (ucontext_t*);// = dlsym(libunwind, "_Ux86_getcontext");
-        int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
-        int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
-        int (*get_reg) (unw_cursor_t *, unw_regnum_t, unw_word_t *);// = dlsym(libunwind, "_Ux86_get_reg");
-        int (*get_proc_name) (unw_cursor_t *, char *, size_t, unw_word_t *);
-
-        unw_context_t uwc;
-        unw_cursor_t cursor;
-
 #if (defined(__arm__))
-        getcontext = dlsym(libunwind, "_Uarm_getcontext");
-        init_local = dlsym(libunwind, "_Uarm_init_local");
-        step = dlsym(libunwind, "_Uarm_step");
-        get_reg = dlsym(libunwind, "_Uarm_get_reg");
-        get_proc_name = dlsym(libunwind, "_Uarm_get_proc_name");
+    getcontext = dlsym(libunwind, "_Uarm_getcontext");
+    init_local = dlsym(libunwind, "_Uarm_init_local");
+    step = dlsym(libunwind, "_Uarm_step");
+    get_reg = dlsym(libunwind, "_Uarm_get_reg");
+    get_proc_name = dlsym(libunwind, "_Uarm_get_proc_name");
 
-        //ucontext_t* context = (ucontext_t*)reserved;
-        unw_tdep_context_t *unw_ctx = (unw_tdep_context_t*)&uwc;
-        mcontext_t* sig_ctx = &uc->uc_mcontext;
-        //we need to store all the general purpose registers so that libunwind can resolve
-        //    the stack correctly, so we read them from the sigcontext into the unw_context
-        unw_ctx->regs[UNW_ARM_R0] = sig_ctx->arm_r0;
-        unw_ctx->regs[UNW_ARM_R1] = sig_ctx->arm_r1;
-        unw_ctx->regs[UNW_ARM_R2] = sig_ctx->arm_r2;
-        unw_ctx->regs[UNW_ARM_R3] = sig_ctx->arm_r3;
-        unw_ctx->regs[UNW_ARM_R4] = sig_ctx->arm_r4;
-        unw_ctx->regs[UNW_ARM_R5] = sig_ctx->arm_r5;
-        unw_ctx->regs[UNW_ARM_R6] = sig_ctx->arm_r6;
-        unw_ctx->regs[UNW_ARM_R7] = sig_ctx->arm_r7;
-        unw_ctx->regs[UNW_ARM_R8] = sig_ctx->arm_r8;
-        unw_ctx->regs[UNW_ARM_R9] = sig_ctx->arm_r9;
-        unw_ctx->regs[UNW_ARM_R10] = sig_ctx->arm_r10;
-        unw_ctx->regs[UNW_ARM_R11] = sig_ctx->arm_fp;
-        unw_ctx->regs[UNW_ARM_R12] = sig_ctx->arm_ip;
-        unw_ctx->regs[UNW_ARM_R13] = sig_ctx->arm_sp;
-        unw_ctx->regs[UNW_ARM_R14] = sig_ctx->arm_lr;
-        unw_ctx->regs[UNW_ARM_R15] = sig_ctx->arm_pc;
+    //ucontext_t* context = (ucontext_t*)reserved;
+    unw_tdep_context_t *unw_ctx = (unw_tdep_context_t*)&uwc;
+    mcontext_t* sig_ctx = &uc->uc_mcontext;
+    //we need to store all the general purpose registers so that libunwind can resolve
+    //    the stack correctly, so we read them from the sigcontext into the unw_context
+    unw_ctx->regs[UNW_ARM_R0] = sig_ctx->arm_r0;
+    unw_ctx->regs[UNW_ARM_R1] = sig_ctx->arm_r1;
+    unw_ctx->regs[UNW_ARM_R2] = sig_ctx->arm_r2;
+    unw_ctx->regs[UNW_ARM_R3] = sig_ctx->arm_r3;
+    unw_ctx->regs[UNW_ARM_R4] = sig_ctx->arm_r4;
+    unw_ctx->regs[UNW_ARM_R5] = sig_ctx->arm_r5;
+    unw_ctx->regs[UNW_ARM_R6] = sig_ctx->arm_r6;
+    unw_ctx->regs[UNW_ARM_R7] = sig_ctx->arm_r7;
+    unw_ctx->regs[UNW_ARM_R8] = sig_ctx->arm_r8;
+    unw_ctx->regs[UNW_ARM_R9] = sig_ctx->arm_r9;
+    unw_ctx->regs[UNW_ARM_R10] = sig_ctx->arm_r10;
+    unw_ctx->regs[UNW_ARM_R11] = sig_ctx->arm_fp;
+    unw_ctx->regs[UNW_ARM_R12] = sig_ctx->arm_ip;
+    unw_ctx->regs[UNW_ARM_R13] = sig_ctx->arm_sp;
+    unw_ctx->regs[UNW_ARM_R14] = sig_ctx->arm_lr;
+    unw_ctx->regs[UNW_ARM_R15] = sig_ctx->arm_pc;
 #elif (defined(__x86_64__))
-        getcontext = dlsym(libunwind, "_Ux86_64_getcontext");
+    getcontext = dlsym(libunwind, "_Ux86_64_getcontext");
         init_local = dlsym(libunwind, "_Ux86_64_init_local");
         step = dlsym(libunwind, "_Ux86_64_step");
         get_reg = dlsym(libunwind, "_Ux86_64_get_reg");
@@ -159,100 +168,127 @@ static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si
         get_proc_name = NULL;
 #endif
 
-        if (init_local != NULL) {
-            init_local(&cursor, &uwc);
+    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "before init_local");
+    if (init_local != NULL) {
+        init_local(&cursor, &uwc);
 
-            unw_word_t ip, sp;
+        unw_word_t ip, sp;
 
-            int count = 0;
-            do {
-                unwind_struct_frame *frame = &unwind->frames[count];
+        int count = 0;
+        do {
+            unwind_struct_frame *frame = &unwind->frames[count];
+            get_reg(&cursor, UNW_REG_IP, &ip);
+            get_reg(&cursor, UNW_REG_SP, &sp);
+            get_proc_name(&cursor, frame->method, 1024, &frame->offset);
+            frame->frame_pointer = (void*)ip;
 
-                get_reg(&cursor, UNW_REG_IP, &ip);
-                get_reg(&cursor, UNW_REG_SP, &sp);
-                get_proc_name(&cursor, frame->method, 1024, &frame->offset);
-
-                frame->frame_pointer = (void*)ip;
-                count++;
-            } while(step(&cursor) > 0 && count < max_depth);
-
-            dlclose(libunwind);
-
-            return count;
-        } else {
-            // Just return a single stack frame here
-            unwind->frames[0].frame_pointer = (void*)get_pc_from_ucontext(uc);
-            return 1;
-        }
-    } else {
-        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libunwind.so could not be loaded");
-
-
-        void *const libcorkscrew = dlopen("libcorkscrew.so", RTLD_LAZY | RTLD_LOCAL);
-        if (libcorkscrew != NULL) {
-
-            ssize_t (*unwind_backtrace_signal_arch)
-                    (siginfo_t*, void*, const map_info_t*, backtrace_frame_t*, size_t, size_t);
-            map_info_t* (*acquire_my_map_info_list)();
-            void (*release_my_map_info_list)(map_info_t*);
-            void (*get_backtrace_symbols)(const backtrace_frame_t*, size_t, backtrace_symbol_t*);
-            void (*free_backtrace_symbols)(backtrace_symbol_t*, size_t);
-
-            unwind_backtrace_signal_arch = dlsym(libcorkscrew, "unwind_backtrace_signal_arch");
-            acquire_my_map_info_list = dlsym(libcorkscrew, "acquire_my_map_info_list");
-            release_my_map_info_list = dlsym(libcorkscrew, "release_my_map_info_list");
-            get_backtrace_symbols = dlsym(libcorkscrew, "get_backtrace_symbols");
-            free_backtrace_symbols = dlsym(libcorkscrew, "free_backtrace_symbols");
-
-
-            if (unwind_backtrace_signal_arch != NULL
-                && acquire_my_map_info_list != NULL
-                && get_backtrace_symbols != NULL
-                && release_my_map_info_list != NULL
-                && free_backtrace_symbols != NULL) {
-                __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "could use libcorkscrew.so");
-
-                backtrace_frame_t frames[max_depth];
-                backtrace_symbol_t symbols[max_depth];
-
-                map_info_t*const info = acquire_my_map_info_list();
-                ssize_t size = unwind_backtrace_signal_arch(si, sc, info, frames, 0, (size_t)max_depth);
-                release_my_map_info_list(info);
-
-                get_backtrace_symbols(frames, (size_t)size, symbols);
-                int i;
-                for (i = 0; i < size; i++) {
-                    unwind_struct_frame *frame = &unwind->frames[i];
-
-                    backtrace_frame_t backtrace_frame = frames[i];
-                    backtrace_symbol_t backtrace_symbol = symbols[i];
-                    const uintptr_t rel = backtrace_symbol.relative_pc - backtrace_symbol.relative_symbol_addr;
-
-                    if (backtrace_symbol.symbol_name != NULL) {
-                        sprintf(frame->method, "%s", backtrace_symbol.symbol_name);
-                    }
-
-                    frame->offset = rel;
-                    frame->frame_pointer = (void *)backtrace_frame.absolute_pc;
-
-                    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%s %d", frame->method, frame->offset);
-                }
-
-                free_backtrace_symbols(symbols, (size_t)size);
-
-                return size;
-            } else {
-                __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "symbols not found in libcorkscrew.so");
+            // Seems to crash on Android v 5.1 when reaching the bottom of the stack
+            // so quit early when there are no more offsets
+            if (frame->offset == 0) {
+                break;
             }
+
+            count++;
+        } while(step(&cursor) > 0 && count < max_depth);
+
+        return count;
+    } else {
+        return unwind_basic(unwind, sc);
+    }
+}
+
+/**
+ * Uses libcorkscrew to unwind the stacktrace
+ * This should work on android less than 5
+ */
+int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+    ssize_t (*unwind_backtrace_signal_arch)
+            (siginfo_t*, void*, const map_info_t*, backtrace_frame_t*, size_t, size_t);
+    map_info_t* (*acquire_my_map_info_list)();
+    void (*release_my_map_info_list)(map_info_t*);
+    void (*get_backtrace_symbols)(const backtrace_frame_t*, size_t, backtrace_symbol_t*);
+    void (*free_backtrace_symbols)(backtrace_symbol_t*, size_t);
+
+    unwind_backtrace_signal_arch = dlsym(libcorkscrew, "unwind_backtrace_signal_arch");
+    acquire_my_map_info_list = dlsym(libcorkscrew, "acquire_my_map_info_list");
+    release_my_map_info_list = dlsym(libcorkscrew, "release_my_map_info_list");
+    get_backtrace_symbols = dlsym(libcorkscrew, "get_backtrace_symbols");
+    free_backtrace_symbols = dlsym(libcorkscrew, "free_backtrace_symbols");
+
+
+    if (unwind_backtrace_signal_arch != NULL
+        && acquire_my_map_info_list != NULL
+        && get_backtrace_symbols != NULL
+        && release_my_map_info_list != NULL
+        && free_backtrace_symbols != NULL) {
+
+        backtrace_frame_t frames[max_depth];
+        backtrace_symbol_t symbols[max_depth];
+
+        map_info_t*const info = acquire_my_map_info_list();
+        ssize_t size = unwind_backtrace_signal_arch(si, sc, info, frames, 0, (size_t)max_depth);
+        release_my_map_info_list(info);
+
+        get_backtrace_symbols(frames, (size_t)size, symbols);
+        int i;
+        for (i = 0; i < size; i++) {
+            unwind_struct_frame *frame = &unwind->frames[i];
+
+            backtrace_frame_t backtrace_frame = frames[i];
+            backtrace_symbol_t backtrace_symbol = symbols[i];
+            const uintptr_t rel = backtrace_symbol.relative_pc - backtrace_symbol.relative_symbol_addr;
+
+            if (backtrace_symbol.symbol_name != NULL) {
+                sprintf(frame->method, "%s", backtrace_symbol.symbol_name);
+            }
+
+            frame->offset = rel;
+            frame->frame_pointer = (void *)backtrace_frame.absolute_pc;
+        }
+
+        free_backtrace_symbols(symbols, (size_t)size);
+
+        return size;
+    } else {
+        return unwind_basic(unwind, sc);
+    }
+}
+
+/**
+ * Finds a way to unwind the stack trace
+ * falls back to simply returning the top frame information
+ */
+static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+
+    int size;
+
+    void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
+    if (libunwind != NULL) {
+        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "could use libunwind.so");
+        size = unwind_libunwind(libunwind, unwind, max_depth, si, sc);
+
+        dlclose(libunwind);
+    } else {
+        void *libcorkscrew = dlopen("libcorkscrew.so", RTLD_LAZY | RTLD_LOCAL);
+        if (libcorkscrew != NULL) {
+            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "could use libcorkscrew.so");
+            size = unwind_libcorkscrew(libcorkscrew, unwind, max_depth, si, sc);
+
             dlclose(libcorkscrew);
         } else {
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libcorkscrew.so could not be loaded");
-        }
 
-        // Just return a single stack frame here
-        unwind->frames[0].frame_pointer = (void*)get_pc_from_ucontext(uc);
-        return 1;
+            void *libbacktrace = dlopen("libbacktrace.so", RTLD_LAZY | RTLD_LOCAL);
+            if (libbacktrace != NULL) {
+                __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libbacktrace is present");
+                dlclose(libbacktrace);
+            }
+
+            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "falling back to basic");
+            size = unwind_basic(unwind, sc);
+        }
     }
+
+    return size;
 }
 
 /**
@@ -296,7 +332,6 @@ int startsWith(const char *pre, const char *str)
  */
 static void signal_handler(int code, struct siginfo* si, void* sc) {
     __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
-
 
     int frames_size = unwind_stack(g_native_code, FRAMES_MAX, si, sc);
 
@@ -342,7 +377,7 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
                         bugsnag_frame->line_number = (int)offs;
                     }
 
-                    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%s %s %d", bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->line_number);
+                    //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%s %s %d", bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->line_number);
 
                     frames_used++;
                 }

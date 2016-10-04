@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <android/log.h>
-#include "bugsnag_common.h"
+#include "bugsnag_error.h"
 
 /**
  * writes the given stack trace frame to the given file
