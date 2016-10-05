@@ -20,6 +20,11 @@ import static android.widget.Toast.LENGTH_SHORT;
 
 public class ExampleActivity extends Activity
 {
+    static {
+        System.loadLibrary("example-ndk");
+    }
+    public native void causeNpeCrash();
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -109,5 +114,9 @@ public class ExampleActivity extends Activity
     public void crash(View view) {
         Other other = new Other();
         other.meow();
+    }
+
+    public void crashNative(View view) {
+        causeNpeCrash();
     }
 }

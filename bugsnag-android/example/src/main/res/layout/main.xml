@@ -25,10 +25,18 @@
       />
 
     <!-- Separator -->
-    <View android:layout_width="fill_parent" android:layout_height="20dp" />
+  <Button
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="Crash App (native)"
+    android:onClick="crashNative"
+    android:id="@+id/button" />
+
+  <View android:layout_width="fill_parent" android:layout_height="20dp" />
 
     <!-- Trigger handled exceptions -->
-    <TextView
+
+  <TextView
       android:layout_width="fill_parent"
       android:layout_height="wrap_content"
       android:layout_marginBottom="10dp"

@@ -1,11 +1,12 @@
 buildscript {
     repositories {
         mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.5.0'
-        classpath 'com.jakewharton.sdkmanager:gradle-plugin:0.12.0'
+        classpath 'com.android.tools.build:gradle:2.1.3'
+        classpath 'com.github.JakeWharton:sdk-manager-plugin:220bf7a88a7072df3ed16dc8466fb144f2817070'
     }
 }
 
@@ -17,17 +18,37 @@ android {
     buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
 
     defaultConfig {
-        minSdkVersion 4
+        minSdkVersion 9
         targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
     }
 
     lintOptions {
         disable 'DefaultLocale'
     }
+
 }
 
 dependencies {
     compile "com.android.support:support-annotations:23.1.1"
+    compile project(":bugsnagndk")
+}
+
+task copyNativeLibsDebug(type: Copy) {
+    from 'bugsnagndk/build/intermediates/binaries/debug/lib/'
+    into 'src/main/jniLibs/'
+}
+
+tasks.withType(JavaCompile) {
+    compileTask -> compileTask.dependsOn(copyNativeLibsDebug)
+}
+
+task copyNativeLibsRelease(type: Copy) {
+    from 'bugsnagndk/build/intermediates/binaries/release/lib/'
+    into 'src/main/jniLibs/'
+}
+
+tasks.withType(JavaCompile) {
+    compileTask -> compileTask.dependsOn(copyNativeLibsRelease)
 }
 
 // Disable doclint:

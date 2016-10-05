@@ -2,31 +2,39 @@ buildscript {
     repositories {
         mavenCentral()
         mavenLocal()
+        jcenter()
     }
     dependencies {
-        classpath 'com.bugsnag:bugsnag-android-gradle-plugin:+'
+        //classpath 'com.bugsnag:bugsnag-android-gradle-plugin:+'
+        classpath 'com.android.tools.build:gradle-experimental:0.7.3'
     }
 }
-apply plugin: 'com.android.application'
 
-android {
-    compileSdkVersion 23
-    buildToolsVersion '23.0.1'
+apply plugin: 'com.android.model.application'
+model {
+    android {
+        compileSdkVersion 23
+        buildToolsVersion '23.0.1'
 
-    buildTypes {
+        buildTypes {
 
-        debug {
-            applicationIdSuffix ".debug"
+            debug {
+                applicationIdSuffix ".debug"
+            }
+
+            release {
+                minifyEnabled true
+                proguardFiles.add(file('proguard-android.txt'))
+            }
         }
 
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.pro'
+        defaultConfig {
+            minSdkVersion.apiLevel 9
         }
-    }
 
-    defaultConfig {
-        minSdkVersion 4
+        ndk {
+            moduleName "example-ndk"
+        }
     }
 }
 
@@ -34,4 +42,4 @@ dependencies {
     compile rootProject
 }
 
-apply plugin: 'com.bugsnag.android.gradle'
+//apply plugin: 'com.bugsnag.android.gradle'

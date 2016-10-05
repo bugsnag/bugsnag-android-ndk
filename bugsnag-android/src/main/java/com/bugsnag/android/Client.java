@@ -24,6 +24,11 @@ import java.util.Map;
  * @see Bugsnag
  */
 public class Client {
+    static {
+        System.loadLibrary("bugsnag-ndk");
+    }
+    public native void setupBugsnag();
+
     private static final boolean BLOCKING = true;
     private static final String SHARED_PREF_KEY = "com.bugsnag.android";
     private static final String USER_ID_KEY = "user.id";
