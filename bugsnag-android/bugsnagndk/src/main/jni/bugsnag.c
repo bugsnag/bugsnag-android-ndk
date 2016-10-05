@@ -168,7 +168,6 @@ int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, stru
         get_proc_name = NULL;
 #endif
 
-    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "before init_local");
     if (init_local != NULL) {
         init_local(&cursor, &uwc);
 
@@ -264,26 +263,16 @@ static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si
 
     void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
     if (libunwind != NULL) {
-        __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "could use libunwind.so");
         size = unwind_libunwind(libunwind, unwind, max_depth, si, sc);
 
         dlclose(libunwind);
     } else {
         void *libcorkscrew = dlopen("libcorkscrew.so", RTLD_LAZY | RTLD_LOCAL);
         if (libcorkscrew != NULL) {
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "could use libcorkscrew.so");
             size = unwind_libcorkscrew(libcorkscrew, unwind, max_depth, si, sc);
 
             dlclose(libcorkscrew);
         } else {
-
-            void *libbacktrace = dlopen("libbacktrace.so", RTLD_LAZY | RTLD_LOCAL);
-            if (libbacktrace != NULL) {
-                __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "libbacktrace is present");
-                dlclose(libbacktrace);
-            }
-
-            __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "falling back to basic");
             size = unwind_basic(unwind, sc);
         }
     }
@@ -331,7 +320,7 @@ int startsWith(const char *pre, const char *str)
  * Handles signals when errors occur and writes a file to the Bugsnag error cache
  */
 static void signal_handler(int code, struct siginfo* si, void* sc) {
-    __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
+    //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
 
     int frames_size = unwind_stack(g_native_code, FRAMES_MAX, si, sc);
 
