@@ -1,12 +1,14 @@
 buildscript {
     repositories {
-        mavenCentral()
         mavenLocal()
         jcenter()
+        flatDir {
+            dirs 'lib'
+        }
     }
     dependencies {
-        //classpath 'com.bugsnag:bugsnag-android-gradle-plugin:+'
-        classpath 'com.android.tools.build:gradle-experimental:0.7.3'
+        classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.3.3'
+        classpath 'com.android.tools.build:gradle-experimental:0.8.0'
     }
 }
 
@@ -14,7 +16,7 @@ apply plugin: 'com.android.model.application'
 model {
     android {
         compileSdkVersion 23
-        buildToolsVersion '23.0.1'
+        buildToolsVersion '23.0.2'
 
         buildTypes {
 
@@ -42,4 +44,4 @@ dependencies {
     compile rootProject
 }
 
-//apply plugin: 'com.bugsnag.android.gradle'
+apply plugin: 'com.bugsnag.android.gradle'
