@@ -425,7 +425,7 @@ int setupBugsnag(JNIEnv *env) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_bugsnag_android_Client_setupBugsnag(JNIEnv *env, jobject instance) {
+Java_com_bugsnag_android_NativeInterface_setupBugsnag(JNIEnv *env, jobject instance) {
     setupBugsnag(env);
 }
 

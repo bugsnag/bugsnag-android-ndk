@@ -199,10 +199,9 @@ void output_error(struct bugsnag_error *er, FILE* file) {
  */
 const char *get_method_string(JNIEnv *env,
                               jclass class,
-                              jobject object,
                               const char *method_name) {
-    jmethodID method = (*env)->GetMethodID(env, class, method_name, "()Ljava/lang/String;");
-    jstring value = (*env)->CallObjectMethod(env, object, method);
+    jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()Ljava/lang/String;");
+    jstring value = (*env)->CallStaticObjectMethod(env, class, method);
 
     if (value == NULL) {
         return "";
@@ -212,53 +211,14 @@ const char *get_method_string(JNIEnv *env,
 }
 
 /**
- * Gets the value from a field that contains a string
+ * Gets the value from a method that contains an int
  */
-const char *get_field_string(JNIEnv *env,
-                             jclass class,
-                             jobject object,
-                             const char *field_name) {
-    jfieldID field = (*env)->GetFieldID(env, class, field_name, "Ljava/lang/String;");
-    jstring value = (*env)->GetObjectField(env, object, field);
-
-    if (value == NULL) {
-        return "";
-    } else {
-        return (*env)->GetStringUTFChars(env, value, JNI_FALSE);
-    }
-}
-
-/**
- * Calls a static method called "getString" with the given param on the given class to get a string value
- */
-const char *get_build_property_string(JNIEnv *env,
-                                      jclass class,
-                                      const char *param_name) {
-
-    jmethodID method = (*env)->GetStaticMethodID(env, class, "getString", "(Ljava/lang/String;)Ljava/lang/String;");
-    jstring param = (*env)->NewStringUTF(env, param_name);
-    jstring value = (*env)->CallStaticObjectMethod(env, class, method, param);
-
-    if (value == NULL) {
-        return "";
-    } else {
-        return (*env)->GetStringUTFChars(env, value, JNI_FALSE);
-    }
-}
-
-/**
- * Gets the value from a field that contains a java.lang.integer
- */
-int get_field_int(JNIEnv *env,
+int get_method_int(JNIEnv *env,
                   jclass class,
-                  jobject object,
-                  const char *field_name) {
-    jfieldID field = (*env)->GetFieldID(env, class, field_name, "Ljava/lang/Integer;");
-    jobject value_integer = (*env)->GetObjectField(env, object, field);
+                  const char *method_name) {
 
-    jclass integer_class = (*env)->FindClass(env, "java/lang/Integer");
-    jmethodID get_value_method = (*env)->GetMethodID(env, integer_class, "intValue", "()I");
-    jint value = (*env)->CallIntMethod(env, value_integer, get_value_method);
+    jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()I");
+    jint value = (*env)->CallStaticIntMethod(env, class, method);
 
     if (value == NULL) {
         return 0;
@@ -268,49 +228,39 @@ int get_field_int(JNIEnv *env,
 }
 
 /**
- * Gets the value from a field that contains a java.lang.float
+ * Gets the value from a method that contains a java.lang.float
  */
-float get_field_float(JNIEnv *env,
+float get_method_float(JNIEnv *env,
                       jclass class,
-                      jobject object,
-                      const char *field_name) {
-    jfieldID field = (*env)->GetFieldID(env, class, field_name, "Ljava/lang/Float;");
-    jobject value_float = (*env)->GetObjectField(env, object, field);
+                      const char *method_name) {
 
-    jclass float_class = (*env)->FindClass(env, "java/lang/Float");
-    jmethodID get_value_method = (*env)->GetMethodID(env, float_class, "floatValue", "()F");
-    jfloat value = (*env)->CallFloatMethod(env, value_float, get_value_method);
+    jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()F");
+    jfloat value = (*env)->CallStaticFloatMethod(env, class, method);
 
     return (float)value;
 }
 
 /**
- * Gets the value from a field that contains a java.lang.long
+ * Gets the value from a method that contains a java.lang.long
  */
-double get_field_long(JNIEnv *env,
+double get_method_double(JNIEnv *env,
                       jclass class,
-                      jobject object,
-                      const char *field_name) {
-    jfieldID field = (*env)->GetFieldID(env, class, field_name, "Ljava/lang/Long;");
-    jobject value_long = (*env)->GetObjectField(env, object, field);
-
-    jclass long_class = (*env)->FindClass(env, "java/lang/Long");
-    jmethodID get_value_method = (*env)->GetMethodID(env, long_class, "doubleValue", "()D");
-    jdouble value = (*env)->CallDoubleMethod(env, value_long, get_value_method);
+                      const char *method_name) {
+    jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()D");
+    jdouble value = (*env)->CallStaticDoubleMethod(env, class, method);
 
     return (double)value;
 }
 
 /**
- * Gets the value from a field that contains a java.lang.boolean
+ * Gets the value from a method that contains a java.lang.boolean
  * returns "true" or "false" string
  */
-const char* get_field_boolean(JNIEnv *env,
+const char* get_method_boolean(JNIEnv *env,
                               jclass class,
-                              jobject object,
-                              const char *field_name) {
-    jfieldID field = (*env)->GetFieldID(env, class, field_name, "Ljava/lang/Boolean;");
-    jobject value_boolean = (*env)->GetObjectField(env, object, field);
+                              const char *method_name) {
+    jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()Ljava/lang/Boolean;");
+    jobject value_boolean = (*env)->CallStaticObjectMethod(env, class, method);
 
     jclass boolean_class = (*env)->FindClass(env, "java/lang/Boolean");
     jmethodID get_string_method = (*env)->GetMethodID(env, boolean_class, "toString", "()Ljava/lang/String;");
@@ -326,93 +276,49 @@ const char* get_field_boolean(JNIEnv *env,
 /**
  * Gets the user details from the client class and pre-populates the bugsnag error
  */
-void populate_user_details(JNIEnv *env, struct bugsnag_error *er, jclass client_class, jobject client) {
+void populate_user_details(JNIEnv *env, struct bugsnag_error *er, jclass interface_class) {
     // Get the user information
-    jfieldID get_user_field = (*env)->GetFieldID(env, client_class, "user", "Lcom/bugsnag/android/User;");
-    jobject user = (*env)->GetObjectField(env, client, get_user_field);
-
-    er->user.id = "";
-    er->user.email = "";
-    er->user.name = "";
-
-    if (user != NULL) {
-        jclass user_class = (*env)->FindClass(env, "com/bugsnag/android/User");
-
-        er->user.id = get_method_string(env, user_class, user, "getId");
-        er->user.email = get_method_string(env, user_class, user, "getEmail");
-        er->user.name = get_method_string(env, user_class, user, "getName");
-    }
+    er->user.id = get_method_string(env, interface_class, "getUserId");
+    er->user.email = get_method_string(env, interface_class, "getUserEmail");
+    er->user.name = get_method_string(env, interface_class, "getUserName");
 }
 
 /**
  * Gets the app data details from the client class and pre-populates the bugsnag error
  */
-void populate_app_data(JNIEnv *env, struct bugsnag_error *er, jclass client_class, jobject client) {
+void populate_app_data(JNIEnv *env, struct bugsnag_error *er, jclass interface_class) {
     // Get the App Data
-    jfieldID get_app_data_field = (*env)->GetFieldID(env, client_class, "appData", "Lcom/bugsnag/android/AppData;");
-    jobject app_data = (*env)->GetObjectField(env, client, get_app_data_field);
-
-    if (app_data != NULL) {
-        jclass app_data_class = (*env)->FindClass(env, "com/bugsnag/android/AppData");
-
-        er->app_data.package_name = get_field_string(env, app_data_class, app_data, "packageName");
-        er->app_data.app_name = get_field_string(env, app_data_class, app_data, "appName");
-        er->app_data.version_name = get_field_string(env, app_data_class, app_data, "versionName");
-        er->app_data.version_code = get_field_int(env, app_data_class, app_data, "versionCode");
-        // Build UUID comes from configuration
-        er->app_data.version = get_method_string(env, app_data_class, app_data, "getAppVersion");
-        er->app_data.release_stage = get_method_string(env, app_data_class, app_data, "getReleaseStage");
-    }
-
-    // Get the configuration
-    jfieldID get_config_field = (*env)->GetFieldID(env, client_class, "config", "Lcom/bugsnag/android/Configuration;");
-    jobject config = (*env)->GetObjectField(env, client, get_config_field);
-    if (config != NULL) {
-        jclass config_class = (*env)->FindClass(env, "com/bugsnag/android/Configuration");
-
-        er->app_data.build_uuid = get_method_string(env, config_class, config, "getBuildUUID");
-    }
+    er->app_data.package_name = get_method_string(env, interface_class, "getPackageName");
+    er->app_data.app_name = get_method_string(env, interface_class, "getAppName");
+    er->app_data.version_name = get_method_string(env, interface_class, "getVersionName");
+    er->app_data.version_code = get_method_int(env, interface_class, "getVersionCode");
+    er->app_data.build_uuid = get_method_string(env, interface_class, "getBuildUUID");
+    er->app_data.version = get_method_string(env, interface_class, "getAppVersion");
+    er->app_data.release_stage = get_method_string(env, interface_class, "getReleaseStage");
 }
 
 /**
  * Gets the device data details from the client class and pre-populates the bugsnag error
  */
-void populate_device_data(JNIEnv *env, struct bugsnag_error *er, jclass client_class, jobject client) {
+void populate_device_data(JNIEnv *env, struct bugsnag_error *er, jclass interface_class) {
     // Get the device data
     er->device.os_name = "android";
 
-    jfieldID get_device_data_field = (*env)->GetFieldID(env, client_class, "deviceData", "Lcom/bugsnag/android/DeviceData;");
-    jobject device_data = (*env)->GetObjectField(env, client, get_device_data_field);
+    er->device.id = get_method_string(env, interface_class, "getDeviceId");
+    er->device.locale = get_method_string(env, interface_class, "getDeviceLocale");
+    er->device.total_memory = get_method_double(env, interface_class, "getDeviceTotalMemory");
+    er->device.rooted = get_method_boolean(env, interface_class, "getDeviceRooted");
+    er->device.screen_density = get_method_float(env, interface_class, "getDeviceScreenDensity");
+    er->device.dpi = get_method_int(env, interface_class, "getDeviceDpi");
+    er->device.screen_resolution = get_method_string(env, interface_class, "getDeviceScreenResolution");
 
-    if (device_data != NULL) {
-        jclass device_data_class = (*env)->FindClass(env, "com/bugsnag/android/DeviceData");
+    er->device.manufacturer = get_method_string(env, interface_class, "getDeviceManufacturer");
+    er->device.brand = get_method_string(env, interface_class, "getDeviceBrand");
+    er->device.model = get_method_string(env, interface_class, "getDeviceModel");
+    er->device.os_version = get_method_string(env, interface_class, "getDeviceOsVersion");
+    er->device.os_build = get_method_string(env, interface_class, "getDeviceOsBuild");
 
-        er->device.id = get_field_string(env, device_data_class, device_data, "id");
-        er->device.locale = get_field_string(env, device_data_class, device_data, "locale");
-        er->device.total_memory = get_field_long(env, device_data_class, device_data, "totalMemory");
-        er->device.rooted = get_field_boolean(env, device_data_class, device_data, "rooted");
-        er->device.screen_density = get_field_float(env, device_data_class, device_data, "screenDensity");
-        er->device.dpi = get_field_int(env, device_data_class, device_data, "dpi");
-        er->device.screen_resolution = get_field_string(env, device_data_class, device_data, "screenResolution");
-    }
-
-    // Get the android Build class
-    jclass build_class = (*env)->FindClass(env, "android/os/Build");
-
-    // TODO: perhaps cache these values in DeviceData so they are easier to access from here
-    er->device.manufacturer = get_build_property_string(env, build_class, "ro.product.manufacturer");
-    er->device.brand = get_build_property_string(env, build_class, "ro.product.brand");
-    er->device.model = get_build_property_string(env, build_class, "ro.product.model");
-    er->device.os_build = get_build_property_string(env, build_class, "ro.build.display.id");
-    er->device.os_version = get_build_property_string(env, build_class, "ro.build.version.release");
-
-    // Get the android Build class
-    jclass system_properties_class = (*env)->FindClass(env, "android/os/SystemProperties");
-    jmethodID method = (*env)->GetStaticMethodID(env, system_properties_class, "getInt", "(Ljava/lang/String;I)I");
-    jstring param1 = (*env)->NewStringUTF(env, "ro.build.version.sdk");
-    jint param2 = 0;
-    jint sdk_int = (*env)->CallStaticIntMethod(env, system_properties_class, method, param1, param2);
-    er->device.api_level = sdk_int;
+    er->device.api_level  = get_method_int(env, interface_class, "getDeviceApiLevel");
 }
 
 /**
@@ -425,23 +331,17 @@ void populate_error_details(JNIEnv *env, struct bugsnag_error *er) {
     er->severity = "error";
 
     // Get the Client object
-    jclass bugsnag_class = (*env)->FindClass(env, "com/bugsnag/android/Bugsnag");
-    jmethodID get_client_method = (*env)->GetStaticMethodID(env, bugsnag_class, "getClient", "()Lcom/bugsnag/android/Client;");
-    jobject client = (*env)->CallStaticObjectMethod(env, bugsnag_class, get_client_method);
-    jclass client_class = (*env)->FindClass(env, "com/bugsnag/android/Client");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     // populate the context
-    er->context = get_method_string(env, client_class, client, "getContext");
+    er->context = get_method_string(env, interface_class, "getContext");
 
     // Get the error store path
-    jfieldID error_store_field = (*env)->GetFieldID(env, client_class, "errorStore", "Lcom/bugsnag/android/ErrorStore;");
-    jobject error_store = (*env)->GetObjectField(env, client, error_store_field);
-    jclass error_store_class = (*env)->FindClass(env, "com/bugsnag/android/ErrorStore");
-    sprintf(er->error_store_path, "%s", get_field_string(env, error_store_class, error_store, "path"));
+    sprintf(er->error_store_path, "%s", get_method_string(env, interface_class, "getErrorStorePath"));
 
-    populate_user_details(env, er, client_class, client);
+    populate_user_details(env, er, interface_class);
 
-    populate_app_data(env, er, client_class, client);
+    populate_app_data(env, er, interface_class);
 
-    populate_device_data(env, er, client_class, client);
+    populate_device_data(env, er, interface_class);
 }

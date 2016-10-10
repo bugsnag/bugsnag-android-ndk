@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_com_bugsnag_android_Client_setupBugsnag(JNIEnv *env, jobject instance);
+JNIEXPORT void JNICALL Java_com_bugsnag_android_NativeInterface_setupBugsnag(JNIEnv *env, jobject instance);
 
 /**
  * Adds the Bugsnag signal handler

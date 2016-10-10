@@ -24,7 +24,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext) {
         client = new Client(androidContext);
-        client.setupBugsnag();
+        NativeInterface.setupBugsnag();
         return client;
     }
 
@@ -36,7 +36,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, String apiKey) {
         client = new Client(androidContext, apiKey);
-        client.setupBugsnag();
+        NativeInterface.setupBugsnag();
         return client;
     }
 
@@ -49,7 +49,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, String apiKey, boolean enableExceptionHandler) {
         client = new Client(androidContext, apiKey, enableExceptionHandler);
-        client.setupBugsnag();
+        NativeInterface.setupBugsnag();
         return client;
     }
 
@@ -61,7 +61,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, Configuration config) {
         client = new Client(androidContext, config);
-        client.setupBugsnag();
+        NativeInterface.setupBugsnag();
         return client;
     }
 

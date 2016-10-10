@@ -15,3 +15,7 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-keep class com.bugsnag.android.NativeInterface { *; }
+-keep class com.bugsnag.android.example.ExampleActivity {
+    public native void causeNpeCrash();
+}

@@ -26,7 +26,7 @@ model {
 
             release {
                 minifyEnabled true
-                proguardFiles.add(file('proguard-android.txt'))
+                proguardFiles.add(file('proguard.pro'))
             }
         }
 
