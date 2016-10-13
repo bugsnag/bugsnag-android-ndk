@@ -83,6 +83,80 @@ uintptr_t get_pc_from_ucontext(const ucontext_t *uc) {
 }
 
 /**
+ * Get the stack pointer, given a pointer to a ucontext_t context.
+ **/
+uintptr_t get_sp_from_ucontext(const ucontext_t *uc) {
+
+#if (defined(__arm__))
+    return uc->uc_mcontext.arm_sp;
+#elif defined(__aarch64__)
+    return uc->uc_mcontext.sp;
+#elif (defined(__x86_64__))
+    return uc->uc_mcontext.gregs[REG_RSP];
+#elif (defined(__i386))
+  return uc->uc_mcontext.gregs[REG_ESP];
+#elif (defined (__ppc__)) || (defined (__powerpc__))
+  return uc->uc_mcontext.regs->nsp;
+#elif (defined(__hppa__))
+  return uc->uc_mcontext.sc_iaoq[0] & ~0x3UL; //TODO: what should this be
+#elif (defined(__sparc__) && defined (__arch64__))
+  return uc->uc_mcontext.mc_gregs[MC_SP];
+#elif (defined(__sparc__) && !defined (__arch64__))
+  return uc->uc_mcontext.gregs[REG_SP];
+#elif (defined(__mips__))
+  return uc->uc_mcontext.gregs[29];
+#else
+#error "Architecture is unknown, please report me!"
+#endif
+}
+
+/**
+ * Checks to see if the given string starts with the given prefix
+ */
+int starts_with(const char *pre, const char *str)
+{
+    if (str == NULL) {
+        return 0; // false
+    }
+
+    size_t lenpre = strlen(pre);
+    size_t lenstr = strlen(str);
+
+    if (lenstr < lenpre) {
+        return 0; // false
+    } else {
+        return strncmp(pre, str, lenpre) == 0;
+    }
+}
+
+/**
+ * Checks if the given string is considered a "system" method or not
+ * NOTE: some methods seem to get added to binaries automatically to catch arithmetic errors
+ */
+int is_system_method(const char *method) {
+    if (starts_with("__aeabi_", method)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Checks if the given string should be considered a "system" file or not
+ */
+int is_system_file(const char *file) {
+    if (starts_with("/system/", file)
+        || starts_with("libc.so", file)
+        || starts_with("libdvm.so", file)
+        || starts_with("libcutils.so", file)
+        || starts_with("[heap]", file)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/**
  * Just returns the first frame in the stack as we couldn't find a library to do it
  */
 int unwind_basic(unwind_struct* unwind, void* sc) {
@@ -91,6 +165,97 @@ int unwind_basic(unwind_struct* unwind, void* sc) {
     // Just return a single stack frame here
     unwind->frames[0].frame_pointer = (void*)get_pc_from_ucontext(uc);
     return 1;
+}
+
+/**
+ * Checks if the given address looks like a program counter or not
+ */
+int is_valid_pc(void* addr) {
+    Dl_info info;
+    if (addr != NULL
+        && dladdr(addr, &info) != 0
+        && info.dli_fname != NULL
+        && info.dli_sname != NULL) {
+
+        if (!(is_system_file(info.dli_fname)
+              || is_system_method(info.dli_sname))) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Scans through the memory looking for the next program counter
+ */
+int look_for_next_frame(uintptr_t current_frame_base, uintptr_t* new_frame_base, uintptr_t* found_pc) {
+
+    int j;
+    for (j = 0; j < WORDS_TO_SCAN; j++) {
+        uintptr_t stack_element = (current_frame_base + (j * (sizeof(uintptr_t))));
+        uintptr_t stack_value = *((uintptr_t*)stack_element);
+
+        if (is_valid_pc((void*)stack_value)) {
+            *found_pc = stack_value;
+            *new_frame_base = stack_element;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * A slightly hacky method that scans through the memory under the stack pointer
+ * of the given context to try and create a stack trace
+ */
+int unwind_frame(unwind_struct* unwind, int max_depth, void* sc) {
+    ucontext_t *const uc = (ucontext_t*) sc;
+
+    int current_output_frame = 0;
+
+    // Check the current pc to see if it is a valid frame
+    uintptr_t pc = get_pc_from_ucontext(uc);
+    if (is_valid_pc((void *)pc)) {
+        unwind_struct_frame *frame = &unwind->frames[current_output_frame];
+
+        sprintf(frame->method, "");
+        frame->offset = 0;
+        frame->frame_pointer = (void*)pc;
+        current_output_frame++;
+    }
+
+    // Get the stack pointer for this context
+    uintptr_t sp = get_sp_from_ucontext(uc);
+
+    // loop down the stack to see if there are more valid pointers
+    uintptr_t current_frame_base = sp;
+    while (current_output_frame < max_depth) {
+
+        uintptr_t new_frame_base;
+        uintptr_t found_pc;
+
+        if (look_for_next_frame(current_frame_base, &new_frame_base, &found_pc)) {
+            unwind_struct_frame *frame = &unwind->frames[current_output_frame];
+
+            sprintf(frame->method, "");
+            frame->offset = 0;
+            frame->frame_pointer = (void*)found_pc;
+
+            current_frame_base = new_frame_base + (sizeof(uintptr_t));
+            current_output_frame++;
+
+        } else {
+            break;
+        }
+    }
+
+    if (current_output_frame > 0) {
+        return current_output_frame;
+    } else {
+        return unwind_basic(unwind, sc);
+    }
 }
 
 /**
@@ -192,7 +357,7 @@ int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, stru
 
         return count;
     } else {
-        return unwind_basic(unwind, sc);
+        return unwind_frame(unwind, max_depth, sc);
     }
 }
 
@@ -229,6 +394,7 @@ int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth
         release_my_map_info_list(info);
 
         get_backtrace_symbols(frames, (size_t)size, symbols);
+        int non_system_found = 0;
         int i;
         for (i = 0; i < size; i++) {
             unwind_struct_frame *frame = &unwind->frames[i];
@@ -243,13 +409,22 @@ int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth
 
             frame->offset = rel;
             frame->frame_pointer = (void *)backtrace_frame.absolute_pc;
-        }
 
+            if (backtrace_symbol.map_name != NULL
+                && !is_system_file(backtrace_symbol.map_name)
+                && (backtrace_symbol.symbol_name == NULL || !is_system_method(backtrace_symbol.symbol_name))) {
+                non_system_found = 1;
+            }
+        }
         free_backtrace_symbols(symbols, (size_t)size);
 
-        return size;
+        if (non_system_found) {
+            return size;
+        } else {
+            return unwind_frame(unwind, max_depth, sc);
+        }
     } else {
-        return unwind_basic(unwind, sc);
+        return unwind_frame(unwind, max_depth, sc);
     }
 }
 
@@ -273,7 +448,7 @@ static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si
 
             dlclose(libcorkscrew);
         } else {
-            size = unwind_basic(unwind, sc);
+            size = unwind_frame(unwind, max_depth, sc);
         }
     }
 
@@ -298,21 +473,6 @@ char* get_signal_name(int code) {
         return "SIGSEGV";
     } else {
         return "UNKNOWN";
-    }
-}
-
-/**
- * Checks to see if the given string starts with the given prefix
- */
-int startsWith(const char *pre, const char *str)
-{
-    size_t lenpre = strlen(pre);
-    size_t lenstr = strlen(str);
-
-    if (lenstr < lenpre) {
-        return 0; // false
-    } else {
-        return strncmp(pre, str, lenpre) == 0;
     }
 }
 
@@ -342,34 +502,38 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
             Dl_info info;
             if (dladdr(unwind_frame->frame_pointer, &info) != 0 && info.dli_fname != NULL) {
 
-                // Check that this isn't a system file
-                if (!startsWith("/system/", info.dli_fname)) {
-                    struct bugsnag_stack_frame* bugsnag_frame = &g_bugsnag_error->exception.stack_trace[frames_used];
+                struct bugsnag_stack_frame* bugsnag_frame = &g_bugsnag_error->exception.stack_trace[frames_used];
 
-                    bugsnag_frame->file = info.dli_fname;
+                bugsnag_frame->file = info.dli_fname;
 
-                    // use the method from unwind if there is one
-                    if (strlen(unwind_frame->method) > 1) {
-                        bugsnag_frame->method = unwind_frame->method;
-                    } else {
-                        bugsnag_frame->method = info.dli_sname;
-                    }
-
-                    // use the offset from unwind if there is one
-                    if (unwind_frame->offset != 0) {
-                        bugsnag_frame->line_number = (int) unwind_frame->offset;
-                    } else {
-                        // Attempt to calculate the line numbers TODO: this seems to produce slightly incorrect results
-                        uintptr_t near = (uintptr_t) info.dli_saddr;
-                        uintptr_t offs = (uintptr_t) unwind_frame->frame_pointer - near;
-
-                        bugsnag_frame->line_number = (int)offs;
-                    }
-
-                    //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%s %s %d", bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->line_number);
-
-                    frames_used++;
+                // use the method from unwind if there is one
+                if (strlen(unwind_frame->method) > 1) {
+                    bugsnag_frame->method = unwind_frame->method;
+                } else {
+                    bugsnag_frame->method = info.dli_sname;
                 }
+
+                // use the offset from unwind if there is one
+                //if (unwind_frame->offset != 0) {
+                //    bugsnag_frame->line_number = (int) unwind_frame->offset;
+                //} else {
+                    // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
+                    uintptr_t offs = (uintptr_t)unwind_frame->frame_pointer - (uintptr_t)info.dli_saddr;
+
+                    bugsnag_frame->line_number = (int)offs;
+                //}
+
+                //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%i, %s %s %d", i, bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->line_number);
+
+                // Check if this is a system file, or handler function
+                if (is_system_file(bugsnag_frame->file)
+                    || is_system_method(bugsnag_frame->method)) {
+                    bugsnag_frame->in_project = 0;
+                } else {
+                    bugsnag_frame->in_project = 1;
+                }
+
+                frames_used++;
             }
         }
     }
@@ -391,7 +555,9 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
 
     /* Call previous handler. */
     if (si->si_signo >= 0 && si->si_signo < SIG_NUMBER_MAX) {
-        g_sigaction_old[si->si_signo].sa_sigaction(code, si, sc);
+        if (g_sigaction_old[si->si_signo].sa_sigaction != NULL) {
+            g_sigaction_old[si->si_signo].sa_sigaction(code, si, sc);
+        }
     }
 }
 
@@ -415,6 +581,7 @@ int setupBugsnag(JNIEnv *env) {
     g_sigaction->sa_flags = SA_SIGINFO;
 
     g_sigaction_old = calloc(sizeof(struct sigaction), SIG_NUMBER_MAX);
+    memset(g_sigaction_old, 0, sizeof(struct sigaction) * SIG_NUMBER_MAX);
     int i;
     for (i = 0; i < SIG_CATCH_COUNT; i++) {
         const int sig = native_sig_catch[i];

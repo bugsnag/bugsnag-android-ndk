@@ -20,6 +20,14 @@ static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
     fputs(frame.file, file);
     fputs("\",\"lineNumber\":", file);
     fprintf(file, "%d", frame.line_number);
+
+    fputs(",\"inProject\":", file);
+    if (frame.in_project) {
+        fputs("\"true\"", file);
+    } else {
+        fputs("\"false\"", file);
+    }
+
     fputs("}", file);
 }
 

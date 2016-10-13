@@ -13,6 +13,9 @@
 /* Maximum value of a caught signal. */
 #define SIG_NUMBER_MAX 32
 
+/* The number of works to look through to find the next program counter */
+#define WORDS_TO_SCAN 40
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -16,7 +16,7 @@ struct bugsnag_stack_frame {
     const char *method;
     const char *file;
     int line_number;
-    // TODO: inProject?
+    int in_project;
 };
 
 /* a Bugsnag exception */
