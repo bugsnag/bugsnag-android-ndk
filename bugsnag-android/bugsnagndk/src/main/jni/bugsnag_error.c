@@ -61,6 +61,8 @@ static void output_exception(struct bugsnag_exception ex, FILE* file) {
     fputs(ex.error_class, file);
     fputs("\",\"message\":\"", file);
     fputs(ex.message, file);
+    fputs("\",\"type\":\"", file);
+    fputs("androidNdk", file);
     fputs("\",\"stacktrace\":[", file);
 
     int i;
