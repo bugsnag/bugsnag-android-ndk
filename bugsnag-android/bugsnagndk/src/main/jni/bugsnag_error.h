@@ -15,7 +15,11 @@
 struct bugsnag_stack_frame {
     const char *method;
     const char *file;
-    int line_number;
+    void * file_address;
+    int file_offset;
+    void * method_address;
+    int method_offset;
+    void * frame_address;
     int in_project;
 };
 

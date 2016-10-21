@@ -12,7 +12,6 @@
 typedef struct unwind_struct_frame {
     void *frame_pointer;
     char method[1024];
-    unw_word_t offset;
 } unwind_struct_frame;
 
 /* Structure to store unwound frames */
@@ -173,9 +172,7 @@ int unwind_basic(unwind_struct* unwind, void* sc) {
 int is_valid_pc(void* addr) {
     Dl_info info;
     if (addr != NULL
-        && dladdr(addr, &info) != 0
-        && info.dli_fname != NULL
-        && info.dli_sname != NULL) {
+        && dladdr(addr, &info) != 0) {
 
         if (!(is_system_file(info.dli_fname)
               || is_system_method(info.dli_sname))) {
@@ -221,7 +218,6 @@ int unwind_frame(unwind_struct* unwind, int max_depth, void* sc) {
         unwind_struct_frame *frame = &unwind->frames[current_output_frame];
 
         sprintf(frame->method, "");
-        frame->offset = 0;
         frame->frame_pointer = (void*)pc;
         current_output_frame++;
     }
@@ -240,7 +236,6 @@ int unwind_frame(unwind_struct* unwind, int max_depth, void* sc) {
             unwind_struct_frame *frame = &unwind->frames[current_output_frame];
 
             sprintf(frame->method, "");
-            frame->offset = 0;
             frame->frame_pointer = (void*)found_pc;
 
             current_frame_base = new_frame_base + (sizeof(uintptr_t));
@@ -341,14 +336,15 @@ int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, stru
         int count = 0;
         do {
             unwind_struct_frame *frame = &unwind->frames[count];
+            uintptr_t offset;
             get_reg(&cursor, UNW_REG_IP, &ip);
             get_reg(&cursor, UNW_REG_SP, &sp);
-            get_proc_name(&cursor, frame->method, 1024, &frame->offset);
+            get_proc_name(&cursor, frame->method, 1024, &offset);
             frame->frame_pointer = (void*)ip;
 
             // Seems to crash on Android v 5.1 when reaching the bottom of the stack
             // so quit early when there are no more offsets
-            if (frame->offset == 0) {
+            if (offset == 0) {
                 break;
             }
 
@@ -401,13 +397,11 @@ int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth
 
             backtrace_frame_t backtrace_frame = frames[i];
             backtrace_symbol_t backtrace_symbol = symbols[i];
-            const uintptr_t rel = backtrace_symbol.relative_pc - backtrace_symbol.relative_symbol_addr;
 
             if (backtrace_symbol.symbol_name != NULL) {
                 sprintf(frame->method, "%s", backtrace_symbol.symbol_name);
             }
 
-            frame->offset = rel;
             frame->frame_pointer = (void *)backtrace_frame.absolute_pc;
 
             if (backtrace_symbol.map_name != NULL
@@ -500,11 +494,13 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
             unwind_struct_frame *unwind_frame = &g_native_code->frames[i + FRAMES_TO_IGNORE];
 
             Dl_info info;
-            if (dladdr(unwind_frame->frame_pointer, &info) != 0 && info.dli_fname != NULL) {
+            if (dladdr(unwind_frame->frame_pointer, &info) != 0) {
 
                 struct bugsnag_stack_frame* bugsnag_frame = &g_bugsnag_error->exception.stack_trace[frames_used];
 
-                bugsnag_frame->file = info.dli_fname;
+                if (info.dli_fname != NULL) {
+                    bugsnag_frame->file = info.dli_fname;
+                }
 
                 // use the method from unwind if there is one
                 if (strlen(unwind_frame->method) > 1) {
@@ -513,17 +509,21 @@ static void signal_handler(int code, struct siginfo* si, void* sc) {
                     bugsnag_frame->method = info.dli_sname;
                 }
 
-                // use the offset from unwind if there is one
-                //if (unwind_frame->offset != 0) {
-                //    bugsnag_frame->line_number = (int) unwind_frame->offset;
-                //} else {
-                    // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
-                    uintptr_t offs = (uintptr_t)unwind_frame->frame_pointer - (uintptr_t)info.dli_saddr;
+                // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
+                bugsnag_frame->file_address = info.dli_fbase;
+                bugsnag_frame->method_address = info.dli_saddr;
+                bugsnag_frame->frame_address = unwind_frame->frame_pointer;
 
-                    bugsnag_frame->line_number = (int)offs;
-                //}
+                uintptr_t file_offset = (uintptr_t)unwind_frame->frame_pointer - (uintptr_t)info.dli_fbase;
+                bugsnag_frame->file_offset = (int)file_offset;
 
-                //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "%i, %s %s %d", i, bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->line_number);
+                if (info.dli_saddr != NULL) {
+                    uintptr_t method_offset =
+                        (uintptr_t) unwind_frame->frame_pointer - (uintptr_t) info.dli_saddr;
+                    bugsnag_frame->method_offset = (int) method_offset;
+                }
+
+                //__android_log_print(ANDROID_LOG_WARN, "BugsnagNdk", "%i, %s %s %d", i, bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->file_offset);
 
                 // Check if this is a system file, or handler function
                 if (is_system_file(bugsnag_frame->file)

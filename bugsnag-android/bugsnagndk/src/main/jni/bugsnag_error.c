@@ -6,6 +6,22 @@
 #include "bugsnag_error.h"
 
 /**
+ * Removes any path from the filename to make it consistent across API versions
+ */
+static char* stripPathFromFile(const char* file) {
+
+    char* pos = (char *) file;
+    char* newpos = strchr(pos, '/');
+
+    while (newpos) {
+        pos = newpos + 1;
+        newpos = strchr(pos, '/');
+    }
+
+    return pos;
+}
+
+/**
  * writes the given stack trace frame to the given file
  */
 static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
@@ -16,10 +32,16 @@ static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
         fputs(frame.method, file);
     }
 
+    if (frame.method_offset != NULL) {
+        fprintf(file, "+%i", frame.method_offset);
+    }
+
     fputs("\",\"file\":\"", file);
-    fputs(frame.file, file);
+    fputs(stripPathFromFile(frame.file), file);
+
+    // TODO: can we get the proper line number client side?
     fputs("\",\"lineNumber\":", file);
-    fprintf(file, "%d", frame.line_number);
+    fprintf(file, "%d", frame.file_offset);
 
     fputs(",\"inProject\":", file);
     if (frame.in_project) {
