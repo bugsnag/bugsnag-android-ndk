@@ -79,7 +79,7 @@ public final class Bugsnag {
      * Gets the context to be sent to Bugsnag.
      * @return Context
      */
-    public String getContext() {
+    public static String getContext() {
         return getClient().getContext();
     }
 
@@ -222,7 +222,7 @@ public final class Bugsnag {
     /**
      * Removes the current user data and sets it back to defaults
      */
-    public void clearUser() {
+    public static void clearUser() {
         getClient().clearUser();
     }
 
