@@ -7,7 +7,7 @@ buildscript {
         }
     }
     dependencies {
-        classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.3.3'
+        //classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.3.3'
         classpath 'com.android.tools.build:gradle-experimental:0.8.0'
     }
 }
@@ -21,12 +21,16 @@ model {
         buildTypes {
 
             debug {
-                applicationIdSuffix ".debug"
+                //applicationIdSuffix ".debug"
+                minifyEnabled true
+                proguardFiles.add(file('proguard.pro'))
             }
 
             release {
                 minifyEnabled true
                 proguardFiles.add(file('proguard.pro'))
+
+                signingConfig = $("android.signingConfigs.myConfig")
             }
         }
 
@@ -36,6 +40,17 @@ model {
 
         ndk {
             moduleName "example-ndk"
+            CFlags.add("-fvisibility=hidden")
+        }
+    }
+
+    android.signingConfigs {
+        create("myConfig") {
+            storeFile file("../../ndktest.jks")
+            storePassword "939harrison"
+            keyAlias "bugsnag"
+            keyPassword "939harrison"
+            storeType "jks"
         }
     }
 }
@@ -44,4 +59,4 @@ dependencies {
     compile rootProject
 }
 
-apply plugin: 'com.bugsnag.android.gradle'
+//apply plugin: 'com.bugsnag.android.gradle'
