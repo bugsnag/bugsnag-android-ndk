@@ -43,6 +43,17 @@ static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
     fputs("\",\"lineNumber\":", file);
     fprintf(file, "%d", frame.file_offset);
 
+    fputs(",\"loadAddress\":", file);
+    fprintf(file, "%d", (uintptr_t)frame.file_address);
+
+    if (frame.method_address != NULL) {
+        fputs(",\"symbolAddress\":", file);
+        fprintf(file, "%d", (uintptr_t) frame.method_address);
+    }
+
+    fputs(",\"frameAddress\":", file);
+    fprintf(file, "%d", (uintptr_t)frame.frame_address);
+
     fputs(",\"inProject\":", file);
     if (frame.in_project) {
         fputs("\"true\"", file);
