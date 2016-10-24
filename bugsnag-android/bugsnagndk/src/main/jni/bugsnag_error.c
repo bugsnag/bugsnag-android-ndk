@@ -19,13 +19,27 @@ static void output_string(const char* string, FILE* file) {
     // loop through the string outputting the characters
     while (c != '\0') {
 
-        // If this is a quote, then output an escape char
         if (c == '"') {
-            fputs("\\", file);
+            // output an escaped quote for quotes
+            fprintf(file, "\\\"");
+        } else if (c == '\\') {
+            // output a double escape character for slashes
+            fprintf(file, "\\\\");
+        } else if (c == '\r' || c == '\n' || c == '\t' || c == '\b' || c == '\f') {
+            // just output a single space instead of whitespace chars
+            fprintf(file, " ");
+        } else if (c == '\x01' || c == '\x02' || c == '\x03' || c == '\x04' || c == '\x05'
+                || c == '\x06' || c == '\x07' || c == '\x08' || c == '\x09' || c == '\x0A'
+                || c == '\x0B' || c == '\x0C' || c == '\x0D' || c == '\x0E' || c == '\x0F'
+                || c == '\x10' || c == '\x11' || c == '\x12' || c == '\x13' || c == '\x14'
+                || c == '\x15' || c == '\x16' || c == '\x17' || c == '\x18' || c == '\x19'
+                || c == '\x1A' || c == '\x1B' || c == '\x1C' || c == '\x1D' || c == '\x1E'
+                || c == '\x1F') {
+            // Don't output these characters
+        } else {
+            // output the char
+            fprintf(file, "%c", c);
         }
-
-        // output the char
-        fprintf(file, "%c", c);
 
         i++;
         c = string[i];
