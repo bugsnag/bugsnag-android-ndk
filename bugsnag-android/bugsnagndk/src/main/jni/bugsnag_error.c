@@ -5,6 +5,35 @@
 #include <android/log.h>
 #include "bugsnag_error.h"
 
+
+/**
+ * Outputs the given string, with escape characters to make sure the output JSON is valid
+ */
+static void output_string(const char* string, FILE* file) {
+
+    fputs("\"", file);
+
+    int i = 0;
+    char c = string[i];
+
+    // loop through the string outputting the characters
+    while (c != '\0') {
+
+        // If this is a quote, then output an escape char
+        if (c == '"') {
+            fputs("\\", file);
+        }
+
+        // output the char
+        fprintf(file, "%c", c);
+
+        i++;
+        c = string[i];
+    }
+
+    fputs("\"", file);
+}
+
 /**
  * Removes any path from the filename to make it consistent across API versions
  */
@@ -25,22 +54,18 @@ static char* stripPathFromFile(const char* file) {
  * writes the given stack trace frame to the given file
  */
 static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
-    fputs("{\"method\":\"", file);
+    fputs("{\"method\":", file);
     if (frame.method == NULL) {
-        fputs("(null)", file);
+        fputs("\"(null)\"", file);
     } else {
-        fputs(frame.method, file);
+        output_string(frame.method, file);
     }
 
-    if (frame.method_offset != NULL) {
-        fprintf(file, "+%i", frame.method_offset);
-    }
-
-    fputs("\",\"file\":\"", file);
-    fputs(stripPathFromFile(frame.file), file);
+    fputs(",\"file\":", file);
+    output_string(stripPathFromFile(frame.file), file);
 
     // TODO: can we get the proper line number client side?
-    fputs("\",\"lineNumber\":", file);
+    fputs(",\"lineNumber\":", file);
     fprintf(file, "%d", frame.file_offset);
 
     fputs(",\"loadAddress\":", file);
@@ -68,13 +93,13 @@ static void output_stack_frame(struct bugsnag_stack_frame frame, FILE* file) {
  * writes the given exception to the given file
  */
 static void output_exception(struct bugsnag_exception ex, FILE* file) {
-    fputs("\"errorClass\":\"", file);
-    fputs(ex.error_class, file);
-    fputs("\",\"message\":\"", file);
-    fputs(ex.message, file);
-    fputs("\",\"type\":\"", file);
-    fputs("androidNdk", file);
-    fputs("\",\"stacktrace\":[", file);
+    fputs("\"errorClass\":", file);
+    output_string(ex.error_class, file);
+    fputs(",\"message\":", file);
+    output_string(ex.message, file);
+    fputs(",\"type\":", file);
+    fputs("\"androidNdk\"", file);
+    fputs(",\"stacktrace\":[", file);
 
     int i;
     for (i = 0; i < ex.frames_used; i++) {
@@ -93,9 +118,8 @@ static void output_exception(struct bugsnag_exception ex, FILE* file) {
  */
 static void output_user(struct bugsnag_user user, FILE* file) {
     if (strlen(user.id) > 1) {
-        fputs("\"id\":\"",file);
-        fputs(user.id, file);
-        fputs("\"", file);
+        fputs("\"id\":",file);
+        output_string(user.id, file);
     }
 
     if (strlen(user.email) > 1) {
@@ -103,9 +127,8 @@ static void output_user(struct bugsnag_user user, FILE* file) {
             fputs(",", file);
         }
 
-        fputs("\"email\":\"",file);
-        fputs(user.email, file);
-        fputs("\"", file);
+        fputs("\"email\":",file);
+        output_string(user.email, file);
     }
 
     if (strlen(user.name) > 1) {
@@ -113,9 +136,8 @@ static void output_user(struct bugsnag_user user, FILE* file) {
             fputs(",", file);
         }
 
-        fputs("\"name\":\"",file);
-        fputs(user.name, file);
-        fputs("\"", file);
+        fputs("\"name\":",file);
+        output_string(user.name, file);
     }
 }
 
@@ -123,57 +145,56 @@ static void output_user(struct bugsnag_user user, FILE* file) {
  * writes the given app data to the given file
  */
 static void output_app_data(struct bugsnag_app_data app, FILE* file) {
-    fputs("\"id\":\"", file);
-    fputs(app.package_name, file);
+    fputs("\"id\":", file);
+    output_string(app.package_name, file);
 
-    fputs("\",\"name\":\"", file);
-    fputs(app.app_name, file);
+    fputs(",\"name\":", file);
+    output_string(app.app_name, file);
 
-    fputs("\",\"packageName\":\"", file);
-    fputs(app.package_name, file);
+    fputs(",\"packageName\":", file);
+    output_string(app.package_name, file);
 
-    fputs("\",\"versionName\":\"", file);
-    fputs(app.version_name, file);
+    fputs(",\"versionName\":", file);
+    output_string(app.version_name, file);
 
-    fputs("\",\"versionCode\":\"", file);
+    fputs(",\"versionCode\":", file);
     fprintf(file, "%d", app.version_code);
 
     if (strlen(app.build_uuid) > 1) {
-        fputs("\",\"buildUUID\":\"", file);
-        fputs(app.build_uuid, file);
+        fputs(",\"buildUUID\":", file);
+        output_string(app.build_uuid, file);
     }
 
-    fputs("\",\"version\":\"", file);
-    fputs(app.version, file);
+    fputs(",\"version\":", file);
+    output_string(app.version, file);
 
-    fputs("\",\"releaseStage\":\"", file);
-    fputs(app.release_stage, file);
-    fputs("\"", file);
+    fputs(",\"releaseStage\":", file);
+    output_string(app.release_stage, file);
 }
 
 /**
  * writes the given device data to the given file
  */
 static void output_device(struct bugsnag_device device, FILE* file) {
-    fputs("\"osName\":\"", file);
-    fputs(device.os_name, file);
+    fputs("\"osName\":", file);
+    output_string(device.os_name, file);
 
-    fputs("\",\"manufacturer\":\"", file);
-    fputs(device.manufacturer, file);
+    fputs(",\"manufacturer\":", file);
+    output_string(device.manufacturer, file);
 
-    fputs("\",\"brand\":\"", file);
-    fputs(device.brand, file);
+    fputs(",\"brand\":", file);
+    output_string(device.brand, file);
 
-    fputs("\",\"model\":\"", file);
-    fputs(device.model, file);
+    fputs(",\"model\":", file);
+    output_string(device.model, file);
 
-    fputs("\",\"id\":\"", file);
-    fputs(device.id, file);
+    fputs(",\"id\":", file);
+    output_string(device.id, file);
 
-    fputs("\",\"apiLevel\":\"", file);
+    fputs(",\"apiLevel\":", file);
     fprintf(file, "%d", device.api_level);
 
-    fputs("\",\"osVersion\":\"", file);
+    fputs(",\"osVersion\":\"", file);
     fputs(device.os_version, file);
 
     fputs("\",\"osBuild\":\"", file);
