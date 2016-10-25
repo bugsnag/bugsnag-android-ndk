@@ -63,6 +63,7 @@ public class MetaData implements JsonStream.Streamable {
         } else {
             tab.remove(key);
         }
+        Bugsnag.getClient().notifyObservers();
     }
 
     /**
@@ -72,6 +73,7 @@ public class MetaData implements JsonStream.Streamable {
      */
     public void clearTab(String tabName) {
         store.remove(tabName);
+        Bugsnag.getClient().notifyObservers();
     }
 
     Map<String, Object> getTab(String tabName) {

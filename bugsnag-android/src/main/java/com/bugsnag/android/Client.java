@@ -11,6 +11,7 @@ import android.text.TextUtils;
 import java.util.Locale;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Observable;
 
 /**
  * A Bugsnag Client instance allows you to use Bugsnag in your Android app.
@@ -23,7 +24,7 @@ import java.util.Map;
  *
  * @see Bugsnag
  */
-public class Client {
+public class Client extends Observable {
 
 
     private static final boolean BLOCKING = true;
@@ -123,6 +124,11 @@ public class Client {
 
         // Flush any on-disk errors
         errorStore.flush();
+    }
+
+    public void notifyObservers() {
+        setChanged();
+        super.notifyObservers();
     }
 
     /**
@@ -328,6 +334,7 @@ public class Client {
             .remove(USER_EMAIL_KEY)
             .remove(USER_NAME_KEY)
             .commit();
+        notifyObservers();
     }
 
     /**
@@ -343,6 +350,7 @@ public class Client {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_ID_KEY, id);
         }
+        notifyObservers();
     }
 
     /**
@@ -357,6 +365,7 @@ public class Client {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_EMAIL_KEY, email);
         }
+        notifyObservers();
     }
 
     /**
@@ -371,6 +380,7 @@ public class Client {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_NAME_KEY, name);
         }
+        notifyObservers();
     }
 
     /**
@@ -446,7 +456,6 @@ public class Client {
      *
      * @param name       the error name or class
      * @param message    the error message
-     * @param context    the error context
      * @param stacktrace the stackframes associated with the error
      * @param callback   callback invoked on the generated error report for
      *                   additional modification
@@ -461,7 +470,6 @@ public class Client {
      *
      * @param name       the error name or class
      * @param message    the error message
-     * @param context    the error context
      * @param stacktrace the stackframes associated with the error
      * @param callback   callback invoked on the generated error report for
      *                   additional modification
@@ -549,10 +557,12 @@ public class Client {
      */
     public void leaveBreadcrumb(String breadcrumb) {
         breadcrumbs.add(breadcrumb);
+        notifyObservers();
     }
 
     public void leaveBreadcrumb(String name, BreadcrumbType type, Map<String, String> metadata) {
         breadcrumbs.add(name, type, metadata);
+        notifyObservers();
     }
 
     /**
@@ -571,6 +581,7 @@ public class Client {
      */
     public void clearBreadcrumbs() {
         breadcrumbs.clear();
+        notifyObservers();
     }
 
     /**

@@ -1,8 +1,14 @@
 package com.bugsnag.android;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.PriorityQueue;
 
 import android.content.Context;
+import android.util.Log;
 
 /**
  * Static access to a Bugsnag Client, the easiest way to use Bugsnag in your Android app.
@@ -14,7 +20,7 @@ import android.content.Context;
  * @see Client
  */
 public final class Bugsnag {
-    private static Client client;
+    static Client client;
     private Bugsnag() {}
 
     /**
@@ -24,7 +30,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext) {
         client = new Client(androidContext);
-        NativeInterface.setupBugsnag();
+        configureClientObservers();
         return client;
     }
 
@@ -36,7 +42,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, String apiKey) {
         client = new Client(androidContext, apiKey);
-        NativeInterface.setupBugsnag();
+        configureClientObservers();
         return client;
     }
 
@@ -49,7 +55,7 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, String apiKey, boolean enableExceptionHandler) {
         client = new Client(androidContext, apiKey, enableExceptionHandler);
-        NativeInterface.setupBugsnag();
+        configureClientObservers();
         return client;
     }
 
@@ -61,8 +67,29 @@ public final class Bugsnag {
      */
     public static Client init(Context androidContext, Configuration config) {
         client = new Client(androidContext, config);
-        NativeInterface.setupBugsnag();
+        configureClientObservers();
         return client;
+    }
+
+    private static void configureClientObservers() {
+
+        // Ensure that the bugsnag observer is registered
+        // Should only happen if the NDK library is present
+        try {
+            String className = "com.bugsnag.android.test.bugsnag_android_ndk.BugsnagObserver";
+            Class c = Class.forName(className);
+            Observer o = (Observer)c.newInstance();
+            client.addObserver(o);
+        } catch (ClassNotFoundException e) {
+            // ignore this one, will happen if the NDK plugin is not present
+        } catch (InstantiationException e) {
+            Logger.warn("Failed to instantiate NDK observer", e);
+        } catch (IllegalAccessException e) {
+            Logger.warn("Could not access NDK observer", e);
+        }
+
+        // Should make NDK components configure
+        client.notifyObservers();
     }
 
     /**

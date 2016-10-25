@@ -66,6 +66,7 @@ public class Configuration {
      */
     public void setAppVersion(String appVersion) {
         this.appVersion = appVersion;
+        notifyObservers();
     }
 
     /**
@@ -86,6 +87,7 @@ public class Configuration {
      */
     public void setContext(String context) {
         this.context = context;
+        notifyObservers();
     }
 
     /**
@@ -107,6 +109,7 @@ public class Configuration {
      */
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
+        notifyObservers();
     }
 
     /**
@@ -128,6 +131,7 @@ public class Configuration {
      */
     public void setBuildUUID(String buildUUID) {
         this.buildUUID = buildUUID;
+        notifyObservers();
     }
 
     /**
@@ -154,6 +158,7 @@ public class Configuration {
      */
     public void setFilters(String[] filters) {
         this.filters = filters;
+        notifyObservers();
     }
 
     /**
@@ -176,6 +181,7 @@ public class Configuration {
      */
     public void setIgnoreClasses(String[] ignoreClasses) {
         this.ignoreClasses = ignoreClasses;
+        notifyObservers();
     }
 
     /**
@@ -200,6 +206,7 @@ public class Configuration {
      */
     public void setNotifyReleaseStages(String[] notifyReleaseStages) {
         this.notifyReleaseStages = notifyReleaseStages;
+        notifyObservers();
     }
 
     /**
@@ -225,6 +232,7 @@ public class Configuration {
      */
     public void setProjectPackages(String[] projectPackages) {
         this.projectPackages = projectPackages;
+        notifyObservers();
     }
 
     /**
@@ -246,6 +254,7 @@ public class Configuration {
      */
     public void setReleaseStage(String releaseStage) {
         this.releaseStage = releaseStage;
+        notifyObservers();
     }
 
     /**
@@ -301,6 +310,7 @@ public class Configuration {
      */
     protected void setMetaData(MetaData metaData) {
         this.metaData = metaData;
+        notifyObservers();
     }
 
     /**
@@ -386,4 +396,11 @@ public class Configuration {
 
         return false;
     }
+
+    private void notifyObservers() {
+        if (Bugsnag.client != null) {
+            Bugsnag.getClient().notifyObservers();
+        }
+    }
+
 }
