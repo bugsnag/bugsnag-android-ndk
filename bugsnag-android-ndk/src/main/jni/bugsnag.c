@@ -592,8 +592,13 @@ int setupBugsnag(JNIEnv *env) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_bugsnag_android_NativeInterface_setupBugsnag(JNIEnv *env, jobject instance) {
+Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag(JNIEnv *env, jclass type) {
     setupBugsnag(env);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateErrorDetails(JNIEnv *env, jclass type) {
+    populate_error_details(env, g_bugsnag_error);
 }
 
 /**
@@ -612,3 +617,4 @@ void tearDownBugsnag() {
     free(g_bugsnag_error);
     free(g_sigaction_old);
 }
+

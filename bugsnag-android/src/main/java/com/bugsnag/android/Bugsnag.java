@@ -76,7 +76,7 @@ public final class Bugsnag {
         // Ensure that the bugsnag observer is registered
         // Should only happen if the NDK library is present
         try {
-            String className = "com.bugsnag.android.test.bugsnag_android_ndk.BugsnagObserver";
+            String className = "com.bugsnag.android.ndk.BugsnagObserver";
             Class c = Class.forName(className);
             Observer o = (Observer)c.newInstance();
             client.addObserver(o);

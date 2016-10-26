@@ -30,25 +30,6 @@ android {
 
 dependencies {
     compile "com.android.support:support-annotations:23.1.1"
-    compile project(":bugsnagndk")
-}
-
-task copyNativeLibsDebug(type: Copy) {
-    from 'bugsnagndk/build/intermediates/binaries/debug/lib/'
-    into 'src/main/jniLibs/'
-}
-
-tasks.withType(JavaCompile) {
-    compileTask -> compileTask.dependsOn(copyNativeLibsDebug)
-}
-
-task copyNativeLibsRelease(type: Copy) {
-    from 'bugsnagndk/build/intermediates/binaries/release/lib/'
-    into 'src/main/jniLibs/'
-}
-
-tasks.withType(JavaCompile) {
-    compileTask -> compileTask.dependsOn(copyNativeLibsRelease)
 }
 
 // Disable doclint:
