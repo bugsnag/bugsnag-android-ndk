@@ -1,58 +1,4 @@
-#include <jni.h>
-#include <android/log.h>
-#include "bugsnag.h"
-#include <signal.h>
-#include <stdio.h>
-#include <dlfcn.h>
-#include <time.h>
-#include "headers/libunwind.h"
-#include "bugsnag_error.h"
-
-/* Structure to store unwound frame */
-typedef struct unwind_struct_frame {
-    void *frame_pointer;
-    char method[1024];
-} unwind_struct_frame;
-
-/* Structure to store unwound frames */
-typedef struct unwind_struct {
-    unwind_struct_frame frames[FRAMES_MAX];
-} unwind_struct;
-
-/* Extracted from Android's include/corkscrew/backtrace.h */
-typedef struct map_info_t map_info_t;
-
-typedef struct {
-    uintptr_t absolute_pc;
-    uintptr_t stack_top;
-    size_t stack_size;
-} backtrace_frame_t;
-
-typedef struct {
-    uintptr_t relative_pc;
-    uintptr_t relative_symbol_addr;
-    char* map_name;
-    char* symbol_name;
-    char* demangled_name;
-} backtrace_symbol_t;
-
-
-// Globals
-/* signals to be handled */
-static const int native_sig_catch[SIG_CATCH_COUNT + 1]
-        = { SIGILL, SIGTRAP, SIGABRT, SIGBUS, SIGFPE, SIGSEGV };
-
-/* the Bugsnag signal handler */
-struct sigaction *g_sigaction;
-
-/* the old signal handler array */
-struct sigaction *g_sigaction_old;
-
-/* the pre-populated Bugsnag error */
-struct bugsnag_error *g_bugsnag_error;
-
-/* structure for storing the unwound stack trace */
-unwind_struct *g_native_code;
+#include "bugsnag_unwind.h"
 
 /**
  * Get the program counter, given a pointer to a ucontext_t context.
@@ -336,17 +282,17 @@ int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, stru
         int count = 0;
         do {
             unwind_struct_frame *frame = &unwind->frames[count];
-            uintptr_t offset;
+            //uintptr_t offset;
             get_reg(&cursor, UNW_REG_IP, &ip);
             get_reg(&cursor, UNW_REG_SP, &sp);
-            get_proc_name(&cursor, frame->method, 1024, &offset);
+            //get_proc_name(&cursor, frame->method, 1024, &offset);
             frame->frame_pointer = (void*)ip;
 
             // Seems to crash on Android v 5.1 when reaching the bottom of the stack
             // so quit early when there are no more offsets
-            if (offset == 0) {
-                break;
-            }
+            //if (offset == 0) {
+            //    break;
+            //}
 
             count++;
         } while(step(&cursor) > 0 && count < max_depth);
@@ -426,7 +372,7 @@ int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth
  * Finds a way to unwind the stack trace
  * falls back to simply returning the top frame information
  */
-static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+int bugsnag_unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
 
     int size;
 
@@ -448,173 +394,3 @@ static int unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* si
 
     return size;
 }
-
-/**
- * Gets a string representation of the error code
- */
-char* get_signal_name(int code) {
-    if (code == SIGILL ) {
-        return "SIGILL";
-    } else if (code == SIGTRAP ) {
-        return "SIGTRAP";
-    } else if (code == SIGABRT ) {
-        return "SIGABRT";
-    } else if (code == SIGBUS ) {
-        return "SIGBUS";
-    } else if (code == SIGFPE ) {
-        return "SIGFPE";
-    } else if (code == SIGSEGV ) {
-        return "SIGSEGV";
-    } else {
-        return "UNKNOWN";
-    }
-}
-
-/**
- * Handles signals when errors occur and writes a file to the Bugsnag error cache
- */
-static void signal_handler(int code, struct siginfo* si, void* sc) {
-    //__android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNdk", "In signal_handler with signal %d", si->si_signo);
-
-    int frames_size = unwind_stack(g_native_code, FRAMES_MAX, si, sc);
-
-    // Create an exception message and class
-    sprintf(g_bugsnag_error->exception.message,"Fatal signal from native: %d (%s), code %d", si->si_signo, get_signal_name(si->si_signo), si->si_code);
-    sprintf(g_bugsnag_error->exception.error_class,"Native Error: %s", get_signal_name(si->si_signo));
-
-    // Ignore the first 2 frames (handler code)
-    int project_frames = frames_size - FRAMES_TO_IGNORE;
-    int frames_used = 0;
-
-    if (project_frames > 0) {
-
-        // populate stack frame element array
-        int i;
-        for (i = 0; i < project_frames; i++) {
-            unwind_struct_frame *unwind_frame = &g_native_code->frames[i + FRAMES_TO_IGNORE];
-
-            Dl_info info;
-            if (dladdr(unwind_frame->frame_pointer, &info) != 0) {
-
-                struct bugsnag_stack_frame* bugsnag_frame = &g_bugsnag_error->exception.stack_trace[frames_used];
-
-                if (info.dli_fname != NULL) {
-                    bugsnag_frame->file = info.dli_fname;
-                }
-
-                // use the method from unwind if there is one
-                if (strlen(unwind_frame->method) > 1) {
-                    bugsnag_frame->method = unwind_frame->method;
-                } else {
-                    bugsnag_frame->method = info.dli_sname;
-                }
-
-                // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
-                bugsnag_frame->file_address = info.dli_fbase;
-                bugsnag_frame->method_address = info.dli_saddr;
-                bugsnag_frame->frame_address = unwind_frame->frame_pointer;
-
-                uintptr_t file_offset = (uintptr_t)unwind_frame->frame_pointer - (uintptr_t)info.dli_fbase;
-                bugsnag_frame->file_offset = (int)file_offset;
-
-                if (info.dli_saddr != NULL) {
-                    uintptr_t method_offset =
-                        (uintptr_t) unwind_frame->frame_pointer - (uintptr_t) info.dli_saddr;
-                    bugsnag_frame->method_offset = (int) method_offset;
-                }
-
-                //__android_log_print(ANDROID_LOG_WARN, "BugsnagNdk", "%i, %s %s %d", i, bugsnag_frame->file, bugsnag_frame->method, bugsnag_frame->file_offset);
-
-                // Check if this is a system file, or handler function
-                if (is_system_file(bugsnag_frame->file)
-                    || is_system_method(bugsnag_frame->method)) {
-                    bugsnag_frame->in_project = 0;
-                } else {
-                    bugsnag_frame->in_project = 1;
-                }
-
-                frames_used++;
-            }
-        }
-    }
-    g_bugsnag_error->exception.frames_used = frames_used;
-
-    // Create a filename for the error
-    time_t now = time(NULL);
-    char filename[strlen(g_bugsnag_error->error_store_path) + 20];
-    sprintf(filename, "%s%ld.json", g_bugsnag_error->error_store_path, now);
-    FILE* file = fopen(filename, "w+");
-
-    if (file != NULL)
-    {
-        output_error(g_bugsnag_error, file);
-
-        fflush(file);
-        fclose(file);
-    }
-
-    /* Call previous handler. */
-    if (si->si_signo >= 0 && si->si_signo < SIG_NUMBER_MAX) {
-        if (g_sigaction_old[si->si_signo].sa_sigaction != NULL) {
-            g_sigaction_old[si->si_signo].sa_sigaction(code, si, sc);
-        }
-    }
-}
-
-
-/**
- * Adds the Bugsnag signal handler
- */
-int setupBugsnag(JNIEnv *env) {
-    g_native_code = calloc(sizeof(unwind_struct), 1);
-    memset(g_native_code, 0, sizeof(struct unwind_struct));
-
-    g_bugsnag_error = calloc(sizeof(bugsnag_error_struct), 1);
-
-    populate_error_details(env, g_bugsnag_error);
-
-    // create a signal handler
-    g_sigaction = calloc(sizeof(struct sigaction), 1);
-    memset(g_sigaction, 0, sizeof(struct sigaction));
-    sigemptyset(&g_sigaction->sa_mask);
-    g_sigaction->sa_sigaction = signal_handler;
-    g_sigaction->sa_flags = SA_SIGINFO;
-
-    g_sigaction_old = calloc(sizeof(struct sigaction), SIG_NUMBER_MAX);
-    memset(g_sigaction_old, 0, sizeof(struct sigaction) * SIG_NUMBER_MAX);
-    int i;
-    for (i = 0; i < SIG_CATCH_COUNT; i++) {
-        const int sig = native_sig_catch[i];
-        sigaction(sig, g_sigaction, &g_sigaction_old[sig]);
-    }
-
-    return 0;
-}
-
-JNIEXPORT void JNICALL
-Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag(JNIEnv *env, jclass type) {
-    setupBugsnag(env);
-}
-
-JNIEXPORT void JNICALL
-Java_com_bugsnag_android_ndk_BugsnagObserver_populateErrorDetails(JNIEnv *env, jclass type) {
-    populate_error_details(env, g_bugsnag_error);
-}
-
-/**
- * Removes the Bugsnag signal handler
- */
-void tearDownBugsnag() {
-    // replace signal handler with old one again
-    int i;
-    for(i = 0; i < SIG_CATCH_COUNT; i++) {
-        int sig = native_sig_catch[i];
-        sigaction(sig, &g_sigaction_old[sig], NULL);
-    }
-
-    free(g_sigaction);
-    free(g_native_code);
-    free(g_bugsnag_error);
-    free(g_sigaction_old);
-}
-

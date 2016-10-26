@@ -2,25 +2,20 @@
  * Bugsnag header file, for including in C code to report exceptions to Bugsnag
  */
 
-#ifndef BUGSNAG_H
-#define BUGSNAG_H
+#ifndef BUGSNAG_NDK_H
+#define BUGSNAG_NDK_H
 
 #include <jni.h>
 
-/* Signals to be caught. */
-#define SIG_CATCH_COUNT 6
-
-/* Maximum value of a caught signal. */
-#define SIG_NUMBER_MAX 32
-
-/* The number of works to look through to find the next program counter */
-#define WORDS_TO_SCAN 40
+#define BUGSNAG_LOG(fmt, ...) __android_log_print(ANDROID_LOG_VERBOSE, "BugsnagNDK", fmt, ##__VA_ARGS__)
+#include "deps/bugsnag/bugsnag.h"
+#include "deps/bugsnag/report.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag(JNIEnv *env, jobject instance);
+JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag (JNIEnv *env, jobject instance);
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateErrorDetails(JNIEnv *env, jclass type);
 
 /**
@@ -32,6 +27,7 @@ extern int setupBugsnag(JNIEnv *);
  * Removes the Bugsnag signal handler
  */
 extern void tearDownBugsnag();
+
 
 #ifdef __cplusplus
 }
