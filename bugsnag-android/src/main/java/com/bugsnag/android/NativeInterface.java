@@ -1,5 +1,7 @@
 package com.bugsnag.android;
 
+import java.util.Map;
+
 /**
  * Used as the entry point for native code to allow proguard to obfuscate other areas if needed
  */
@@ -108,5 +110,9 @@ class NativeInterface {
 
     public static int getDeviceApiLevel() {
         return android.os.Build.VERSION.SDK_INT;
+    }
+
+    public static Map<String, Object> getMetaData() {
+        return Bugsnag.getClient().getMetaData().store;
     }
 }

@@ -66,7 +66,7 @@ public class Configuration {
      */
     public void setAppVersion(String appVersion) {
         this.appVersion = appVersion;
-        notifyObservers();
+        notifyObservers(NotifyType.APP);
     }
 
     /**
@@ -87,7 +87,7 @@ public class Configuration {
      */
     public void setContext(String context) {
         this.context = context;
-        notifyObservers();
+        notifyObservers(NotifyType.CONTEXT);
     }
 
     /**
@@ -109,7 +109,6 @@ public class Configuration {
      */
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
-        notifyObservers();
     }
 
     /**
@@ -131,7 +130,7 @@ public class Configuration {
      */
     public void setBuildUUID(String buildUUID) {
         this.buildUUID = buildUUID;
-        notifyObservers();
+        notifyObservers(NotifyType.APP);
     }
 
     /**
@@ -158,7 +157,6 @@ public class Configuration {
      */
     public void setFilters(String[] filters) {
         this.filters = filters;
-        notifyObservers();
     }
 
     /**
@@ -181,7 +179,6 @@ public class Configuration {
      */
     public void setIgnoreClasses(String[] ignoreClasses) {
         this.ignoreClasses = ignoreClasses;
-        notifyObservers();
     }
 
     /**
@@ -206,7 +203,7 @@ public class Configuration {
      */
     public void setNotifyReleaseStages(String[] notifyReleaseStages) {
         this.notifyReleaseStages = notifyReleaseStages;
-        notifyObservers();
+        notifyObservers(NotifyType.RELEASE_STAGES);
     }
 
     /**
@@ -232,7 +229,6 @@ public class Configuration {
      */
     public void setProjectPackages(String[] projectPackages) {
         this.projectPackages = projectPackages;
-        notifyObservers();
     }
 
     /**
@@ -254,7 +250,7 @@ public class Configuration {
      */
     public void setReleaseStage(String releaseStage) {
         this.releaseStage = releaseStage;
-        notifyObservers();
+        notifyObservers(NotifyType.APP);
     }
 
     /**
@@ -310,7 +306,7 @@ public class Configuration {
      */
     protected void setMetaData(MetaData metaData) {
         this.metaData = metaData;
-        notifyObservers();
+        notifyObservers(NotifyType.META);
     }
 
     /**
@@ -397,9 +393,9 @@ public class Configuration {
         return false;
     }
 
-    private void notifyObservers() {
+    private void notifyObservers(NotifyType type) {
         if (Bugsnag.client != null) {
-            Bugsnag.getClient().notifyObservers();
+            Bugsnag.getClient().notifyBugsnagObservers(type);
         }
     }
 

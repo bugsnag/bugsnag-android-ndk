@@ -1,14 +1,9 @@
 package com.bugsnag.android;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Observable;
 import java.util.Observer;
-import java.util.PriorityQueue;
 
 import android.content.Context;
-import android.util.Log;
 
 /**
  * Static access to a Bugsnag Client, the easiest way to use Bugsnag in your Android app.
@@ -90,7 +85,7 @@ public final class Bugsnag {
         }
 
         // Should make NDK components configure
-        client.notifyObservers();
+        client.notifyBugsnagObservers(NotifyType.ALL);
     }
 
     /**

@@ -39,6 +39,12 @@ public class MainActivity extends Activity {
 
         Bugsnag.init(this, config);
 
+        Bugsnag.getMetaData().addToTab("tab1", "Key1", "StringValue");
+        Bugsnag.getMetaData().addToTab("tab1", "Key2", 23);
+
+        Bugsnag.getMetaData().addToTab("tab2", "Key1", "StringValue");
+        Bugsnag.getMetaData().addToTab("tab2", "Key2", 23);
+
         // Set the user information
         Bugsnag.setUser("123456", "james@example.com", "James Smith");
 

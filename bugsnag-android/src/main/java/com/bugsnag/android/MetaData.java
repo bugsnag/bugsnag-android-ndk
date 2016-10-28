@@ -23,7 +23,7 @@ public class MetaData implements JsonStream.Streamable {
     private static final String OBJECT_PLACEHOLDER = "[OBJECT]";
 
     private String[] filters;
-    private final Map<String, Object> store;
+    final Map<String, Object> store;
 
     /**
      * Create an empty MetaData object.
@@ -63,7 +63,7 @@ public class MetaData implements JsonStream.Streamable {
         } else {
             tab.remove(key);
         }
-        Bugsnag.getClient().notifyObservers();
+        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
     }
 
     /**
@@ -73,7 +73,7 @@ public class MetaData implements JsonStream.Streamable {
      */
     public void clearTab(String tabName) {
         store.remove(tabName);
-        Bugsnag.getClient().notifyObservers();
+        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
     }
 
     Map<String, Object> getTab(String tabName) {
@@ -89,6 +89,8 @@ public class MetaData implements JsonStream.Streamable {
 
     void setFilters(String... filters) {
         this.filters = filters;
+
+        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
     }
 
     static MetaData merge(MetaData... metaDataList) {

@@ -3,7 +3,6 @@
 #include <dlfcn.h>
 
 #include <jni.h>
-#include <android/log.h>
 
 #include "headers/libunwind.h"
 #include "bugsnag_ndk.h"
@@ -185,6 +184,42 @@ Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag(JNIEnv *env, jclass ty
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_BugsnagObserver_populateErrorDetails(JNIEnv *env, jclass type) {
     bsg_populate_event_details(env, g_bugsnag_report);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateUserDetails(JNIEnv *env, jclass type) {
+    bsg_populate_user_details(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateAppDetails(JNIEnv *env, jclass type) {
+    bsg_populate_app_data(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateDeviceDetails(JNIEnv *env, jclass type) {
+    bsg_populate_device_data(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateContextDetails(JNIEnv *env, jclass type) {
+    bsg_populate_context(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateBreadcumbDetails(JNIEnv *env, jclass type) {
+    bsg_populate_breadcrumbs(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateMetaDataDetails(JNIEnv *env, jclass type) {
+    bsg_populate_meta_data(env, g_bugsnag_report->event);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateReleaseStagesDetails(JNIEnv *env,
+                                                                          jclass type) {
+    bsg_load_release_stages(env);
 }
 
 /**

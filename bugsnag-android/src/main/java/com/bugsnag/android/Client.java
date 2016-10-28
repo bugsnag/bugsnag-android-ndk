@@ -126,9 +126,9 @@ public class Client extends Observable {
         errorStore.flush();
     }
 
-    public void notifyObservers() {
+    public void notifyBugsnagObservers(NotifyType type) {
         setChanged();
-        super.notifyObservers();
+        super.notifyObservers(type.getValue());
     }
 
     /**
@@ -334,7 +334,7 @@ public class Client extends Observable {
             .remove(USER_EMAIL_KEY)
             .remove(USER_NAME_KEY)
             .commit();
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.USER);
     }
 
     /**
@@ -350,7 +350,7 @@ public class Client extends Observable {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_ID_KEY, id);
         }
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.USER);
     }
 
     /**
@@ -365,7 +365,7 @@ public class Client extends Observable {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_EMAIL_KEY, email);
         }
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.USER);
     }
 
     /**
@@ -380,7 +380,7 @@ public class Client extends Observable {
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_NAME_KEY, name);
         }
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.USER);
     }
 
     /**
@@ -557,12 +557,12 @@ public class Client extends Observable {
      */
     public void leaveBreadcrumb(String breadcrumb) {
         breadcrumbs.add(breadcrumb);
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.BREADCRUMB);
     }
 
     public void leaveBreadcrumb(String name, BreadcrumbType type, Map<String, String> metadata) {
         breadcrumbs.add(name, type, metadata);
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.BREADCRUMB);
     }
 
     /**
@@ -581,7 +581,7 @@ public class Client extends Observable {
      */
     public void clearBreadcrumbs() {
         breadcrumbs.clear();
-        notifyObservers();
+        notifyBugsnagObservers(NotifyType.BREADCRUMB);
     }
 
     /**
