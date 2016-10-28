@@ -82,6 +82,7 @@ public final class Bugsnag {
             client.addObserver(o);
         } catch (ClassNotFoundException e) {
             // ignore this one, will happen if the NDK plugin is not present
+            Logger.warn("Failed to find NDK observer");
         } catch (InstantiationException e) {
             Logger.warn("Failed to instantiate NDK observer", e);
         } catch (IllegalAccessException e) {

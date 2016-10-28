@@ -5,8 +5,8 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0'
-        classpath 'com.android.tools.build:gradle-experimental:0.8.0'
+        classpath 'com.android.tools.build:gradle:2.2.2'
+        classpath 'com.android.tools.build:gradle-experimental:0.8.2'
         classpath 'com.github.JakeWharton:sdk-manager-plugin:220bf7a88a7072df3ed16dc8466fb144f2817070'
     }
 }
@@ -49,7 +49,7 @@ model {
 }
 
 dependencies {
-    compile "com.android.support:support-annotations:23.1.1"
+    compile "com.android.support:support-annotations:25.0.0"
 }
 
 // Tasks to release the library to maven central

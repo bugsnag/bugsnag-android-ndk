@@ -8,15 +8,15 @@ buildscript {
     }
     dependencies {
         //classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.3.3'
-        classpath 'com.android.tools.build:gradle-experimental:0.8.0'
+        classpath 'com.android.tools.build:gradle-experimental:0.8.2'
     }
 }
 
 apply plugin: 'com.android.model.application'
 model {
     android {
-        compileSdkVersion 23
-        buildToolsVersion '23.0.2'
+        compileSdkVersion 25
+        buildToolsVersion '25.0.0'
 
         buildTypes {
 
@@ -35,7 +35,12 @@ model {
         }
 
         defaultConfig {
+            applicationId "com.bugsnag.android.ndk.test"
             minSdkVersion.apiLevel 9
+            targetSdkVersion.apiLevel 25
+            versionCode 1
+            versionName "1.0"
+            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         }
 
         ndk {
@@ -46,10 +51,10 @@ model {
 
     android.signingConfigs {
         create("myConfig") {
-            storeFile file("../../ndktest.jks")
-            storePassword "939harrison"
+            storeFile file("../../bugsnag-ndk-test.jks")
+            storePassword "bugsnagtest"
             keyAlias "bugsnag"
-            keyPassword "939harrison"
+            keyPassword "bugsnagtest"
             storeType "jks"
         }
     }
