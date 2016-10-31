@@ -8,6 +8,9 @@ import com.bugsnag.android.Bugsnag;
 import com.bugsnag.android.Configuration;
 import com.bugsnag.android.ndk.BugsnagObserver;
 
+import java.util.HashMap;
+import java.util.Map;
+
 
 public class MainActivity extends Activity {
     static {
@@ -39,11 +42,62 @@ public class MainActivity extends Activity {
 
         Bugsnag.init(this, config);
 
-        Bugsnag.getMetaData().addToTab("tab1", "Key1", "StringValue");
-        Bugsnag.getMetaData().addToTab("tab1", "Key2", 23);
 
-        Bugsnag.getMetaData().addToTab("tab2", "Key1", "StringValue");
-        Bugsnag.getMetaData().addToTab("tab2", "Key2", 23);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyString", "StringValue1");
+        Bugsnag.getMetaData().addToTab("tab1", "KeyShort", new Short("12"));
+        Bugsnag.getMetaData().addToTab("tab1", "KeyInt", 123);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyDouble", 123.4);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyFloat", 123.45F);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyLong", 1234L);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyByte", new Byte("3"));
+        Bugsnag.getMetaData().addToTab("tab1", "KeyBool", false);
+        Bugsnag.getMetaData().addToTab("tab1", "KeyChar", new Character('c'));
+
+        Map<String, Object> mapValue = new HashMap<>();
+        mapValue.put("KeyString1", "StringValue1");
+        mapValue.put("KeyInt1", 12345);
+        mapValue.put("KeyIntArray", new int[] {4,6,1});
+        mapValue.put("KeyObjArray", new Object[] {"StringValue3", 12346F, true});
+
+        Map<String, Object> submapValue = new HashMap<>();
+        submapValue.put("KeyString2", "StringValue2");
+        submapValue.put("KeyInt2", 123456);
+        mapValue.put("submapKey", submapValue);
+
+        Bugsnag.getMetaData().addToTab("tab1", "mapKey", mapValue);
+
+
+        Bugsnag.getMetaData().addToTab("tab1", "shortArrayKey", new short[] {1,2,1});
+        Bugsnag.getMetaData().addToTab("tab1", "intArrayKey", new int[] {4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "doubleArrayKey", new double[] {4.4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "floatArrayKey", new float[] {4.5F,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "longArrayKey", new long[] {4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "byteArrayKey", new byte[] {4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "boolArrayKey", new boolean[] {false,true,false});
+        Bugsnag.getMetaData().addToTab("tab1", "charArrayKey", new char[] {'a','b','c'});
+
+        Bugsnag.getMetaData().addToTab("tab1", "shortObjArrayKey", new Short[] {1,2,1});
+        Bugsnag.getMetaData().addToTab("tab1", "intObjArrayKey", new Integer[] {4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "doubleObjArrayKey", new Double[] {4.4,6.4,1.3});
+        Bugsnag.getMetaData().addToTab("tab1", "floatObjArrayKey", new Float[] {4.5F,6.0F,1.0F});
+        Bugsnag.getMetaData().addToTab("tab1", "longObjArrayKey", new Long[] {4L,6L,1L});
+        Bugsnag.getMetaData().addToTab("tab1", "byteObjArrayKey", new Byte[] {4,6,1});
+        Bugsnag.getMetaData().addToTab("tab1", "boolObjArrayKey", new Boolean[] {false,true,false});
+        Bugsnag.getMetaData().addToTab("tab1", "charObjArrayKey", new Character[] {'a','b','c'});
+
+
+        Bugsnag.getMetaData().addToTab("tab1", "stringArrayKey", new String[] {"string1", "string2", "string3"});
+        Bugsnag.getMetaData().addToTab("tab1", "objArrayKey", new Object[] {"StringValue3", 12346F, true});
+
+        Map<String, Object> submapValue2 = new HashMap<>();
+        submapValue2.put("KeyString2", "StringValue2");
+        submapValue2.put("KeyInt2", 123456);
+        Bugsnag.getMetaData().addToTab("tab1", "objSubArrayKey", new Object[] {new int[] {4,6,1}, new Object[] {"StringValue3", 12346F, true}, submapValue2});
+
+
+
+        Bugsnag.getMetaData().addToTab("tab2", "Key1", "StringValue2");
+        Bugsnag.getMetaData().addToTab("tab2", "Key2", 345);
 
         // Set the user information
         Bugsnag.setUser("123456", "james@example.com", "James Smith");

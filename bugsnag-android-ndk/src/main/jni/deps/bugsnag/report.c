@@ -175,30 +175,62 @@ void bugsnag_event_delete(bsg_event *event, bsg_event_section section,
   json_object_remove(section_obj, key);
 }
 
-void bugsnag_event_set_metadata_string(bsg_event *event, char *section,
-                                       char *key, char *value) {
-  JSON_Object *section_obj = _event_section(event->custom_diagnostics, section);
-  json_object_set_string(section_obj, key, value);
+JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event) {
+  return json_value_get_object(event->custom_diagnostics);
 }
 
-void bugsnag_event_set_metadata_number(bsg_event *event, char *section,
-                                       char *key, double value) {
-  JSON_Object *section_obj = _event_section(event->custom_diagnostics, section);
-  json_object_set_number(section_obj, key, value);
+
+void bugsnag_event_clear_metadata_base(bsg_event *event) {
+  json_object_clear(json_value_get_object(event->custom_diagnostics));
 }
 
-void bugsnag_event_set_metadata_bool(bsg_event *event, char *section, char *key,
-                                     int value) {
-  JSON_Object *section_obj = _event_section(event->custom_diagnostics, section);
-  json_object_set_boolean(section_obj, key, value);
+
+JSON_Object* bugsnag_event_add_meta_data_object_object(JSON_Object* section, const char *name) {
+  JSON_Value *section_value = json_value_init_object();
+  json_object_set_value(section, name, section_value);
+  return json_value_get_object(section_value);
 }
 
-void bugsnag_event_delete_metadata(bsg_event *event, char *section, char *key) {
-  JSON_Object *section_obj = _event_section(event->custom_diagnostics, section);
-  json_object_remove(section_obj, key);
+JSON_Object* bugsnag_event_add_meta_data_array_object(JSON_Array* section) {
+  JSON_Value *section_value = json_value_init_object();
+  json_array_append_value(section, section_value);
+  return json_value_get_object(section_value);
 }
 
-void bugsnag_event_delete_metadata_section(bsg_event *event, char *section) {
-  JSON_Object *obj = json_value_get_object(event->custom_diagnostics);
-  json_object_remove(obj, section);
+void bugsnag_event_set_metadata_string(JSON_Object* section, const char *key, const char *value) {
+  json_object_set_string(section, key, value);
 }
+
+void bugsnag_event_set_metadata_number(JSON_Object* section, const char *key, double value) {
+  json_object_set_number(section, key, value);
+}
+
+void bugsnag_event_set_metadata_bool(JSON_Object* section, const char *key, int value) {
+  json_object_set_boolean(section, key, value);
+}
+
+JSON_Array* bugsnag_event_add_meta_data_object_array(JSON_Object* section, const char *name) {
+  JSON_Value *section_value = json_value_init_array();
+  json_object_set_value(section, name, section_value);
+  return json_value_get_array(section_value);
+}
+
+JSON_Array* bugsnag_event_add_meta_data_array_array(JSON_Array* section) {
+  JSON_Value * section_value = json_value_init_array();
+  json_array_append_value(section, section_value);
+  return json_value_get_array(section_value);
+}
+
+void bugsnag_event_set_metadata_array_string(JSON_Array* section, const char *value) {
+  json_array_append_string(section, value);
+}
+
+void bugsnag_event_set_metadata_array_number(JSON_Array* section, double value) {
+  json_array_append_number(section, value);
+}
+
+void bugsnag_event_set_metadata_array_bool(JSON_Array* section, int value) {
+  json_array_append_boolean(section, value);
+}
+
+

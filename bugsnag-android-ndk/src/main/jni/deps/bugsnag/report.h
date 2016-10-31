@@ -187,27 +187,61 @@ void bugsnag_event_delete(bsg_event *event, bsg_event_section section,
                           char *key);
 
 /**
- * Append custom diagnostic data to a report in a specified section
+ * Gets the tab to add items to from the meta data
  */
-void bugsnag_event_set_metadata_string(bsg_event *event, char *section,
-                                       char *key, char *value);
+JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event);
+
+/**
+ * Clears all data from the meta data
+ */
+void bugsnag_event_clear_metadata_base(bsg_event *event);
+
+/**
+ * Adds a new object with the given name, to the given object
+ */
+JSON_Object* bugsnag_event_add_meta_data_object_object(JSON_Object* section, const char *name);
+
+/**
+ * Adds a new object to the given array
+ */
+JSON_Object* bugsnag_event_add_meta_data_array_object(JSON_Array* section);
+
+/**
+ * Adds a new array with the given name, to the given object
+ */
+JSON_Array* bugsnag_event_add_meta_data_object_array(JSON_Object* section, const char *name);
+
+/**
+ * Adds a new array to the given array
+ */
+JSON_Array* bugsnag_event_add_meta_data_array_array(JSON_Array* section);
+
+/**
+ * Gets or adds a new array with the given name, to the given section
+ */
+JSON_Array* bugsnag_event_get_meta_data_array(JSON_Object* section, const char *name);
+
 /**
  * Append custom diagnostic data to a report in a specified section
  */
-void bugsnag_event_set_metadata_number(bsg_event *event, char *section,
-                                       char *key, double value);
+void bugsnag_event_set_metadata_string(JSON_Object* section, const char *key, const char *value);
+
 /**
  * Append custom diagnostic data to a report in a specified section
  */
-void bugsnag_event_set_metadata_bool(bsg_event *event, char *section, char *key,
-                                     int value);
+void bugsnag_event_set_metadata_number(JSON_Object* section, const char *key, double value);
+
 /**
- * Delete a value from the custom diagnostics section of the report.
+ * Append custom diagnostic data to a report in a specified section
  */
-void bugsnag_event_delete_metadata(bsg_event *event, char *section, char *key);
-/**
- * Delete custom diagnostic data from a report for a specified section
- */
-void bugsnag_event_delete_metadata_section(bsg_event *event, char *section);
+void bugsnag_event_set_metadata_bool(JSON_Object* section, const char *key, int value);
+
+
+void bugsnag_event_set_metadata_array_string(JSON_Array* section, const char *value);
+
+void bugsnag_event_set_metadata_array_number(JSON_Array* section, double value);
+
+void bugsnag_event_set_metadata_array_bool(JSON_Array* section, int value);
+
 
 #endif
