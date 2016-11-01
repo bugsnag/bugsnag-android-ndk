@@ -11,10 +11,17 @@ char *get_method_string(JNIEnv *env, jclass class, const char *method_name) {
     jmethodID method = (*env)->GetStaticMethodID(env, class, method_name, "()Ljava/lang/String;");
     jstring value = (*env)->CallStaticObjectMethod(env, class, method);
 
-    if (value)
-        return (char *)(*env)->GetStringUTFChars(env, value, JNI_FALSE);
+    char * str;
 
-    return "";
+    if (value) {
+        str = (char*)(*env)->GetStringUTFChars(env, value, JNI_FALSE);
+    } else {
+        str = "";
+    }
+
+    (*env)->DeleteLocalRef(env, value);
+
+    return str;
 }
 
 /**
@@ -54,8 +61,11 @@ int get_method_boolean(JNIEnv *env, jclass class, const char *method_name) {
     jobject value_boolean = (*env)->CallStaticObjectMethod(env, class, method);
 
     jclass boolean_class = (*env)->FindClass(env, "java/lang/Boolean");
-    jmethodID get_string_method = (*env)->GetMethodID(env, boolean_class, "toString", "()Ljava/lang/String;");
-    jstring value = (*env)->CallObjectMethod(env, value_boolean, get_string_method);
+    jmethodID bool_value_method = (*env)->GetMethodID(env, boolean_class, "booleanValue", "()Z");
+    jboolean value = (*env)->CallBooleanMethod(env, value_boolean, bool_value_method);
+
+    (*env)->DeleteLocalRef(env, value_boolean);
+    (*env)->DeleteLocalRef(env, boolean_class);
 
     if (value) {
         return 1;
@@ -74,6 +84,8 @@ void bsg_populate_user_details(JNIEnv *env, bsg_event *event) {
     bugsnag_event_set_string(event, BSG_USER, "id", get_method_string(env, interface_class, "getUserId"));
     bugsnag_event_set_string(event, BSG_USER, "email", get_method_string(env, interface_class, "getUserEmail"));
     bugsnag_event_set_string(event, BSG_USER, "name", get_method_string(env, interface_class, "getUserName"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 /**
@@ -90,6 +102,8 @@ void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
     bugsnag_event_set_string(event, BSG_APP, "versionName", get_method_string(env, interface_class, "getVersionName"));
     bugsnag_event_set_number(event, BSG_APP, "versionCode", get_method_int(env, interface_class, "getVersionCode"));
     bugsnag_event_set_string(event, BSG_APP, "buildUUID", get_method_string(env, interface_class, "getBuildUUID"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 /**
@@ -115,6 +129,8 @@ void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
     bugsnag_event_set_string(event, BSG_DEVICE, "brand", get_method_string(env, interface_class, "getDeviceBrand"));
     bugsnag_event_set_string(event, BSG_DEVICE, "model", get_method_string(env, interface_class, "getDeviceModel"));
     bugsnag_event_set_number(event, BSG_DEVICE, "apiLevel", get_method_int(env, interface_class, "getDeviceApiLevel"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 
@@ -126,6 +142,8 @@ void bsg_populate_context(JNIEnv *env, bsg_event *event) {
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     event->context = get_method_string(env, interface_class, "getContext");
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 /**
@@ -136,6 +154,8 @@ void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     // TODO
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 int string_ends_with(const char * str, const char * suffix)
@@ -172,7 +192,7 @@ const char* get_class_name(JNIEnv *env, jobject object) {
     jmethodID get_name_method = (*env)->GetMethodID(env, class_class, "getName", "()Ljava/lang/String;");
     jstring class_name = (*env)->CallObjectMethod(env, class, get_name_method);
 
-    const char* name = (*env)->GetStringUTFChars(env, class_name, 0);
+    const char* name = (*env)->GetStringUTFChars(env, class_name, JNI_FALSE);
 
     (*env)->DeleteLocalRef(env, object_class);
     (*env)->DeleteLocalRef(env, class);
@@ -235,7 +255,7 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* base, jobject value) {
             jobject element_key = (*env)->GetObjectArrayElement(env, key_array_value, i);
             jobject element_value = bsg_get_item_from_map(env, value, element_key);
 
-            const char* element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, 0);
+            const char* element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, JNI_FALSE);
 
             bsg_add_meta_data_item(env, base, element_key_str, element_value);
 
@@ -328,7 +348,7 @@ jarray bsg_get_meta_data_array_from_collection(JNIEnv *env, jobject value) {
 }
 
 const char* bsg_get_meta_data_string(JNIEnv *env, jobject value) {
-    return (*env)->GetStringUTFChars(env, (jstring)value, 0);
+    return (*env)->GetStringUTFChars(env, (jstring)value, JNI_FALSE);
 }
 
 jint bsg_get_meta_data_int(JNIEnv *env, jobject value) {
@@ -553,7 +573,7 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event) {
         int i;
         for (i = 0; i < size; i++) {
             jobject key = (*env)->GetObjectArrayElement(env, key_array_value, i);
-            const char* tab_name = (*env)->GetStringUTFChars(env, (jstring)key, 0);
+            const char* tab_name = (*env)->GetStringUTFChars(env, (jstring)key, JNI_FALSE);
 
             jobject tab_value = bsg_get_item_from_map(env, meta_data_value, key);
 
@@ -580,12 +600,19 @@ void bsg_load_release_stages(JNIEnv *env) {
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     // TODO
+
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 char *bsg_load_error_store_path(JNIEnv *env) {
     BUGSNAG_LOG("bsg_load_error_store_path");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-    return get_method_string(env, interface_class, "getErrorStorePath");
+
+    char* path = get_method_string(env, interface_class, "getErrorStorePath");
+
+    (*env)->DeleteLocalRef(env, interface_class);
+
+    return path;
 }
 
 /**
