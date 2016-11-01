@@ -236,6 +236,14 @@ void bugsnag_event_set_metadata_number(JSON_Object* section, const char *key, do
  */
 void bugsnag_event_set_metadata_bool(JSON_Object* section, const char *key, int value);
 
+/**
+ * Delete a value from the custom diagnostics section of the report.
+ */
+void bugsnag_event_delete_metadata(bsg_event *event, char *section, char *key);
+/**
+ * Delete custom diagnostic data from a report for a specified section
+ */
+void bugsnag_event_delete_metadata_section(bsg_event *event, char *section);
 
 void bugsnag_event_set_metadata_array_string(JSON_Array* section, const char *value);
 

@@ -209,6 +209,16 @@ void bugsnag_event_set_metadata_bool(JSON_Object* section, const char *key, int 
   json_object_set_boolean(section, key, value);
 }
 
+void bugsnag_event_delete_metadata(bsg_event *event, char *section, char *key) {
+  JSON_Object *section_obj = _event_section(event->custom_diagnostics, section);
+  json_object_remove(section_obj, key);
+}
+
+void bugsnag_event_delete_metadata_section(bsg_event *event, char *section) {
+  JSON_Object *obj = json_value_get_object(event->custom_diagnostics);
+  json_object_remove(obj, section);
+}
+
 JSON_Array* bugsnag_event_add_meta_data_object_array(JSON_Object* section, const char *name) {
   JSON_Value *section_value = json_value_init_array();
   json_object_set_value(section, name, section_value);
