@@ -77,90 +77,6 @@ int get_method_boolean(JNIEnv *env, jclass class, const char *method_name) {
         return 0;
     }
 }
-
-/**
- * Gets the user details from the client class and pre-populates the bugsnag error
- */
-void bsg_populate_user_details(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_user_details");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-
-    bugsnag_event_set_string(event, BSG_USER, "id", get_method_string(env, interface_class, "getUserId"));
-    bugsnag_event_set_string(event, BSG_USER, "email", get_method_string(env, interface_class, "getUserEmail"));
-    bugsnag_event_set_string(event, BSG_USER, "name", get_method_string(env, interface_class, "getUserName"));
-
-    (*env)->DeleteLocalRef(env, interface_class);
-}
-
-/**
- * Gets the app data details from the client class and pre-populates the bugsnag error
- */
-void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_app_data");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-
-    bugsnag_event_set_string(event, BSG_APP, "releaseStage", get_method_string(env, interface_class, "getReleaseStage"));
-    bugsnag_event_set_string(event, BSG_APP, "packageName", get_method_string(env, interface_class, "getPackageName"));
-    bugsnag_event_set_string(event, BSG_APP, "name", get_method_string(env, interface_class, "getAppName"));
-    bugsnag_event_set_string(event, BSG_APP, "version", get_method_string(env, interface_class, "getAppVersion"));
-    bugsnag_event_set_string(event, BSG_APP, "versionName", get_method_string(env, interface_class, "getVersionName"));
-    bugsnag_event_set_number(event, BSG_APP, "versionCode", get_method_int(env, interface_class, "getVersionCode"));
-    bugsnag_event_set_string(event, BSG_APP, "buildUUID", get_method_string(env, interface_class, "getBuildUUID"));
-
-    (*env)->DeleteLocalRef(env, interface_class);
-}
-
-/**
- * Gets the device data details from the client class and pre-populates the bugsnag error
- */
-void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_device_data");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-
-    bugsnag_event_set_string(event, BSG_DEVICE, "osName", "Android");
-    bugsnag_event_set_string(event, BSG_DEVICE, "osVersion", get_method_string(env, interface_class, "getDeviceOsVersion"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "osBuild", get_method_string(env, interface_class, "getDeviceOsBuild"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "id", get_method_string(env, interface_class, "getDeviceId"));
-    bugsnag_event_set_number(event, BSG_DEVICE, "totalMemory", get_method_double(env, interface_class, "getDeviceTotalMemory"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "locale", get_method_string(env, interface_class, "getDeviceLocale"));
-
-    bugsnag_event_set_bool(event, BSG_DEVICE, "rooted", get_method_boolean(env, interface_class, "getDeviceRooted"));
-    bugsnag_event_set_number(event, BSG_DEVICE, "dpi", get_method_int(env, interface_class, "getDeviceDpi"));
-    bugsnag_event_set_number(event, BSG_DEVICE, "screenDensity", get_method_float(env, interface_class, "getDeviceScreenDensity"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "screenResolution", get_method_string(env, interface_class, "getDeviceScreenResolution"));
-
-    bugsnag_event_set_string(event, BSG_DEVICE, "manufacturer", get_method_string(env, interface_class, "getDeviceManufacturer"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "brand", get_method_string(env, interface_class, "getDeviceBrand"));
-    bugsnag_event_set_string(event, BSG_DEVICE, "model", get_method_string(env, interface_class, "getDeviceModel"));
-    bugsnag_event_set_number(event, BSG_DEVICE, "apiLevel", get_method_int(env, interface_class, "getDeviceApiLevel"));
-
-    (*env)->DeleteLocalRef(env, interface_class);
-}
-
-/**
- * Gets the context from the client class and pre-populates the bugsnag error
- */
-void bsg_populate_context(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_context");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-
-    event->context = get_method_string(env, interface_class, "getContext");
-
-    (*env)->DeleteLocalRef(env, interface_class);
-}
-
-/**
- * Gets the breadcrumbs from the client class and pre-populates the bugsnag error
- */
-void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_breadcrumbs");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-
-    // TODO
-
-    (*env)->DeleteLocalRef(env, interface_class);
-}
-
 /**
  * Gets the class name for the given object
  */
@@ -269,6 +185,7 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value) {
             jobject element_key = (*env)->GetObjectArrayElement(env, key_array_value, i);
             jobject element_value = bsg_get_item_from_map(env, value, element_key);
 
+            // TODO: this assumes that the key is a string
             const char* element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, JNI_FALSE);
 
             bsg_add_meta_data_item(env, object, element_key_str, element_value);
@@ -606,6 +523,7 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event) {
 
         int i;
         for (i = 0; i < size; i++) {
+            // The key should always be a string for the base tabs
             jobject key = (*env)->GetObjectArrayElement(env, key_array_value, i);
             const char* tab_name = (*env)->GetStringUTFChars(env, (jstring)key, JNI_FALSE);
 
@@ -624,6 +542,104 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event) {
 
     (*env)->DeleteLocalRef(env, interface_class);
     (*env)->DeleteLocalRef(env, meta_data_value);
+}
+
+
+/**
+ * Gets the user details from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_user_details(JNIEnv *env, bsg_event *event) {
+    BUGSNAG_LOG("bsg_populate_user_details");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+
+    bugsnag_event_set_string(event, BSG_USER, "id", get_method_string(env, interface_class, "getUserId"));
+    bugsnag_event_set_string(event, BSG_USER, "email", get_method_string(env, interface_class, "getUserEmail"));
+    bugsnag_event_set_string(event, BSG_USER, "name", get_method_string(env, interface_class, "getUserName"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Gets the app data details from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
+    BUGSNAG_LOG("bsg_populate_app_data");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+
+    bugsnag_event_set_string(event, BSG_APP, "releaseStage", get_method_string(env, interface_class, "getReleaseStage"));
+    bugsnag_event_set_string(event, BSG_APP, "packageName", get_method_string(env, interface_class, "getPackageName"));
+    bugsnag_event_set_string(event, BSG_APP, "name", get_method_string(env, interface_class, "getAppName"));
+    bugsnag_event_set_string(event, BSG_APP, "version", get_method_string(env, interface_class, "getAppVersion"));
+    bugsnag_event_set_string(event, BSG_APP, "versionName", get_method_string(env, interface_class, "getVersionName"));
+    bugsnag_event_set_number(event, BSG_APP, "versionCode", get_method_int(env, interface_class, "getVersionCode"));
+    bugsnag_event_set_string(event, BSG_APP, "buildUUID", get_method_string(env, interface_class, "getBuildUUID"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Gets the device data details from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
+    BUGSNAG_LOG("bsg_populate_device_data");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+
+    bugsnag_event_set_string(event, BSG_DEVICE, "osName", "Android");
+    bugsnag_event_set_string(event, BSG_DEVICE, "osVersion", get_method_string(env, interface_class, "getDeviceOsVersion"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "osBuild", get_method_string(env, interface_class, "getDeviceOsBuild"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "id", get_method_string(env, interface_class, "getDeviceId"));
+    bugsnag_event_set_number(event, BSG_DEVICE, "totalMemory", get_method_double(env, interface_class, "getDeviceTotalMemory"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "locale", get_method_string(env, interface_class, "getDeviceLocale"));
+
+    bugsnag_event_set_bool(event, BSG_DEVICE, "rooted", get_method_boolean(env, interface_class, "getDeviceRooted"));
+    bugsnag_event_set_number(event, BSG_DEVICE, "dpi", get_method_int(env, interface_class, "getDeviceDpi"));
+    bugsnag_event_set_number(event, BSG_DEVICE, "screenDensity", get_method_float(env, interface_class, "getDeviceScreenDensity"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "screenResolution", get_method_string(env, interface_class, "getDeviceScreenResolution"));
+
+    bugsnag_event_set_string(event, BSG_DEVICE, "manufacturer", get_method_string(env, interface_class, "getDeviceManufacturer"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "brand", get_method_string(env, interface_class, "getDeviceBrand"));
+    bugsnag_event_set_string(event, BSG_DEVICE, "model", get_method_string(env, interface_class, "getDeviceModel"));
+    bugsnag_event_set_number(event, BSG_DEVICE, "apiLevel", get_method_int(env, interface_class, "getDeviceApiLevel"));
+
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Gets the context from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_context(JNIEnv *env, bsg_event *event) {
+    BUGSNAG_LOG("bsg_populate_context");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+
+    event->context = get_method_string(env, interface_class, "getContext");
+
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Gets the breadcrumbs from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
+    BUGSNAG_LOG("bsg_populate_breadcrumbs");
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+
+    jmethodID get_breadcrumbs_method = (*env)->GetStaticMethodID(env, interface_class, "getBreadcrumbs", "()[Ljava/lang/Object;");
+    jarray breadcrumbs_value = (*env)->CallStaticObjectMethod(env, interface_class, get_breadcrumbs_method);
+
+    // loop over all the items in the map and add them
+    int size = (*env)->GetArrayLength(env, breadcrumbs_value);
+
+    for (int i = 0; i < size; i++) {
+        jobject element_value = (*env)->GetObjectArrayElement(env, breadcrumbs_value, i);
+
+        BUGSNAG_LOG("Found breadcrumb %d", i);
+
+        (*env)->DeleteLocalRef(env, element_value);
+    }
+
+
+    (*env)->DeleteLocalRef(env, breadcrumbs_value);
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 /**
@@ -666,5 +682,6 @@ void bsg_populate_event_details(JNIEnv *env, struct bugsnag_ndk_report *report) 
     bsg_populate_meta_data(env, event);
 
     bsg_load_release_stages(env);
+    // TODO: Filter keys?
 
 }

@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+
+import com.bugsnag.android.BreadcrumbType;
 import com.bugsnag.android.Bugsnag;
 import com.bugsnag.android.Configuration;
 import com.bugsnag.android.ndk.BugsnagObserver;
@@ -106,10 +108,16 @@ public class MainActivity extends Activity {
         submapValue2.put("KeyInt2", 123456);
         Bugsnag.getMetaData().addToTab("tab1", "objSubArrayKey", new Object[] {new int[] {4,6,1}, new Object[] {"StringValue3", 12346F, true}, submapValue2});
 
-
-
         Bugsnag.getMetaData().addToTab("tab2", "Key1", "StringValue2");
         Bugsnag.getMetaData().addToTab("tab2", "Key2", 345);
+
+
+
+        Map<String, String> values = new HashMap<>();
+        mapValue.put("KeyString1", "StringValue1");
+        mapValue.put("KeyString2", "StringValue2");
+        Bugsnag.leaveBreadcrumb("Something happened here", BreadcrumbType.MANUAL, values);
+
 
         // Set the user information
         Bugsnag.setUser("123456", "james@example.com", "James Smith");

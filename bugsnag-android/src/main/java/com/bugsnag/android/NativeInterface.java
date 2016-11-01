@@ -6,11 +6,6 @@ import java.util.Map;
  * Used as the entry point for native code to allow proguard to obfuscate other areas if needed
  */
 class NativeInterface {
-    static {
-        System.loadLibrary("bugsnag-ndk");
-    }
-    public static native void setupBugsnag();
-
 
     public static String getContext() {
         return Bugsnag.getClient().getContext();
@@ -114,5 +109,9 @@ class NativeInterface {
 
     public static Map<String, Object> getMetaData() {
         return Bugsnag.getClient().getMetaData().store;
+    }
+
+    public static Object[] getBreadcrumbs() {
+        return Bugsnag.getClient().breadcrumbs.store.toArray();
     }
 }

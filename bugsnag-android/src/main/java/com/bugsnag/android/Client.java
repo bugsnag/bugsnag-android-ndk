@@ -37,7 +37,7 @@ public class Client extends Observable {
     private final Context appContext;
     protected final AppData appData;
     protected final DeviceData deviceData;
-    private final Breadcrumbs breadcrumbs;
+    final Breadcrumbs breadcrumbs;
     protected final User user = new User();
     protected final ErrorStore errorStore;
 
