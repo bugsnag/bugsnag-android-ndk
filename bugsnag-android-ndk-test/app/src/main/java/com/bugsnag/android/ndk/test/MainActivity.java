@@ -8,7 +8,9 @@ import com.bugsnag.android.Bugsnag;
 import com.bugsnag.android.Configuration;
 import com.bugsnag.android.ndk.BugsnagObserver;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -84,6 +86,16 @@ public class MainActivity extends Activity {
         Bugsnag.getMetaData().addToTab("tab1", "byteObjArrayKey", new Byte[] {4,6,1});
         Bugsnag.getMetaData().addToTab("tab1", "boolObjArrayKey", new Boolean[] {false,true,false});
         Bugsnag.getMetaData().addToTab("tab1", "charObjArrayKey", new Character[] {'a','b','c'});
+
+        Bugsnag.getMetaData().addToTab("tab1", "shortObjListKey", Arrays.asList((short)1,(short)2,(short)1));
+        Bugsnag.getMetaData().addToTab("tab1", "intObjListKey", Arrays.asList(4,6,1));
+        Bugsnag.getMetaData().addToTab("tab1", "doubleObjListKey", Arrays.asList(4.4,6.4,1.3));
+        Bugsnag.getMetaData().addToTab("tab1", "floatObjListKey", Arrays.asList(4.5F,6.0F,1.0F));
+        Bugsnag.getMetaData().addToTab("tab1", "longObjListKey", Arrays.asList(4L,6L,1L));
+        Bugsnag.getMetaData().addToTab("tab1", "byteObjListKey", Arrays.asList((byte)4,(byte)6,(byte)1));
+        Bugsnag.getMetaData().addToTab("tab1", "boolObjListKey", Arrays.asList(false,true,false));
+        Bugsnag.getMetaData().addToTab("tab1", "charObjListKey", Arrays.asList('a','b','c'));
+        Bugsnag.getMetaData().addToTab("tab1", "ObjectListKey", Arrays.asList("StringValue3", 12346F, true));
 
 
         Bugsnag.getMetaData().addToTab("tab1", "stringArrayKey", new String[] {"string1", "string2", "string3"});

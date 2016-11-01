@@ -316,6 +316,17 @@ void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* base, jarray value) {
     }
 }
 
+jarray bsg_get_meta_data_array_from_collection(JNIEnv *env, jobject value) {
+    // Get the object array from the collection
+    jclass collection_class = (*env)->FindClass(env, "java/util/Collection");
+    jmethodID to_array_method = (*env)->GetMethodID(env, collection_class, "toArray", "()[Ljava/lang/Object;");
+    jarray array = (*env)->CallObjectMethod(env, value, to_array_method);
+
+    (*env)->DeleteLocalRef(env, collection_class);
+
+    return array;
+}
+
 const char* bsg_get_meta_data_string(JNIEnv *env, jobject value) {
     return (*env)->GetStringUTFChars(env, (jstring)value, 0);
 }
@@ -398,12 +409,22 @@ jboolean bsg_get_meta_data_boolean(JNIEnv *env, jobject value) {
 void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value) {
     const char * type_name = get_class_name(env, value);
 
+    jclass map_class = (*env)->FindClass(env, "java/util/Map");
+    jclass colleciton_class = (*env)->FindClass(env, "java/util/Collection");
+
     if (string_starts_with(type_name, "[")) {
         // Create a new section with the given key
         JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
         bsg_add_meta_data_array(env, new_array, value);
-    } else if (string_ends_with(type_name, "Map")) {
+    } else if ((*env)->IsInstanceOf(env, value, colleciton_class)) {
+        // Create a new section with the given key
+        JSON_Array* new_array = bugsnag_object_add_array(object, key);
+
+        jarray array = bsg_get_meta_data_array_from_collection(env, value);
+        bsg_add_meta_data_array(env, new_array, array);
+        (*env)->DeleteLocalRef(env, array);
+    } else if ((*env)->IsInstanceOf(env, value, map_class)) {
         // Create a new section with the given key
         JSON_Object* new_section = bugsnag_object_add_object(object, key);
 
@@ -441,6 +462,9 @@ void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, j
 
         bugsnag_object_set_string(object, key, type_name);
     }
+
+    (*env)->DeleteLocalRef(env, map_class);
+    (*env)->DeleteLocalRef(env, colleciton_class);
 }
 
 /**
@@ -449,16 +473,26 @@ void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, j
 void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value) {
     const char * type_name = get_class_name(env, value);
 
+    jclass map_class = (*env)->FindClass(env, "java/util/Map");
+    jclass colleciton_class = (*env)->FindClass(env, "java/util/Collection");
+
     if (string_starts_with(type_name, "[")) {
-        // Create a new section with the given key
+        // Create a new array
         JSON_Array* new_array = bugsnag_array_add_array(array);
 
         bsg_add_meta_data_array(env, new_array, value);
-    } else if (string_ends_with(type_name, "Map")) {
-        // Create a new section with the given key
-        JSON_Object* new_section = bugsnag_array_add_object(array);
+    } else if ((*env)->IsInstanceOf(env, value, colleciton_class)) {
+        // Create a new array
+        JSON_Array* new_array = bugsnag_array_add_array(array);
 
-        bsg_add_meta_data_map(env, new_section, value);
+        jarray array_values = bsg_get_meta_data_array_from_collection(env, value);
+        bsg_add_meta_data_array(env, new_array, array_values);
+        (*env)->DeleteLocalRef(env, array_values);
+    } else if ((*env)->IsInstanceOf(env, value, map_class)) {
+        // Create a new object
+        JSON_Object* new_object = bugsnag_array_add_object(array);
+
+        bsg_add_meta_data_map(env, new_object, value);
     } else if (strcmp(type_name, "java.lang.String") == 0) {
         const char* value_str = bsg_get_meta_data_string(env, value);
         bugsnag_array_set_string(array, value_str);
@@ -491,6 +525,9 @@ void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value)
         BUGSNAG_LOG("unsupported type %s", type_name);
         bugsnag_array_set_string(array, type_name);
     }
+
+    (*env)->DeleteLocalRef(env, map_class);
+    (*env)->DeleteLocalRef(env, colleciton_class);
 }
 
 
