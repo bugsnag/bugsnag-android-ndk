@@ -4,6 +4,10 @@
 #include "bugsnag_ndk_report.h"
 #include "bugsnag_ndk.h"
 
+
+void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value);
+void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value);
+
 /**
  * Gets the value from a method that returns a string
  */
@@ -133,7 +137,6 @@ void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
     (*env)->DeleteLocalRef(env, interface_class);
 }
 
-
 /**
  * Gets the context from the client class and pre-populates the bugsnag error
  */
@@ -158,35 +161,12 @@ void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
     (*env)->DeleteLocalRef(env, interface_class);
 }
 
-int string_ends_with(const char * str, const char * suffix)
-{
-    int str_len = strlen(str);
-    int suffix_len = strlen(suffix);
-
-    if (str_len >= suffix_len) {
-        return strcmp(str + (str_len-suffix_len), suffix) == 0;
-    } else {
-        return 0;
-    }
-}
-
-int string_starts_with(const char *str, const char *pre)
-{
-    size_t lenpre = strlen(pre);
-    size_t lenstr = strlen(str);
-
-    if (lenstr < lenpre) {
-        return 0; // false
-    } else {
-        return strncmp(pre, str, lenpre) == 0;
-    }
-}
-
+/**
+ * Gets the class name for the given object
+ */
 const char* get_class_name(JNIEnv *env, jobject object) {
 
-    jclass object_class = (*env)->FindClass(env, "java/lang/Object");
-    jmethodID get_class_method = (*env)->GetMethodID(env, object_class, "getClass", "()Ljava/lang/Class;");
-    jobject class = (*env)->CallObjectMethod(env, object, get_class_method);
+    jclass class = (*env)->GetObjectClass(env, object);
 
     jclass class_class = (*env)->FindClass(env, "java/lang/Class");
     jmethodID get_name_method = (*env)->GetMethodID(env, class_class, "getName", "()Ljava/lang/String;");
@@ -194,7 +174,6 @@ const char* get_class_name(JNIEnv *env, jobject object) {
 
     const char* name = (*env)->GetStringUTFChars(env, class_name, JNI_FALSE);
 
-    (*env)->DeleteLocalRef(env, object_class);
     (*env)->DeleteLocalRef(env, class);
     (*env)->DeleteLocalRef(env, class_class);
     (*env)->DeleteLocalRef(env, class_name);
@@ -202,6 +181,36 @@ const char* get_class_name(JNIEnv *env, jobject object) {
     return name;
 }
 
+/**
+ * Checks if the given object is an instance of a type of the given name
+ */
+int is_instance_of(JNIEnv *env, jobject object, const char* type_name) {
+    jclass class = (*env)->FindClass(env, type_name);
+    jboolean instance_of = (*env)->IsInstanceOf(env, object, class);
+
+    (*env)->DeleteLocalRef(env, class);
+
+    return instance_of;
+}
+
+/**
+ * Checks if the given object is an array
+ */
+int is_array(JNIEnv *env, jobject object) {
+    jclass class_class = (*env)->FindClass(env, "java/lang/Class");
+    jmethodID is_array_method = (*env)->GetMethodID(env, class_class, "isArray", "()Z");
+    jclass obj_class = (*env)->GetObjectClass(env, object);
+    jboolean is_array = (*env)->CallBooleanMethod(env, obj_class, is_array_method);
+
+    (*env)->DeleteLocalRef(env, class_class);
+    (*env)->DeleteLocalRef(env, obj_class);
+
+    return is_array;
+}
+
+/**
+ * Gets the size of the given map object
+ */
 int bsg_get_map_size(JNIEnv *env, jobject value) {
     jclass map_class = (*env)->FindClass(env, "java/util/Map");
     jmethodID size_method = (*env)->GetMethodID(env, map_class, "size", "()I");
@@ -212,6 +221,9 @@ int bsg_get_map_size(JNIEnv *env, jobject value) {
     return size;
 }
 
+/**
+ * Gets the array of keys from the given map object
+ */
 jarray bsg_get_map_key_array(JNIEnv *env, jobject value) {
     jclass map_class = (*env)->FindClass(env, "java/util/Map");
     jmethodID key_set_method = (*env)->GetMethodID(env, map_class, "keySet", "()Ljava/util/Set;");
@@ -228,6 +240,9 @@ jarray bsg_get_map_key_array(JNIEnv *env, jobject value) {
     return array;
 }
 
+/**
+ * Gets an item from a map using the given key
+ */
 jobject bsg_get_item_from_map(JNIEnv *env, jobject map, jobject key) {
     jclass map_class = (*env)->FindClass(env, "java/util/Map");
     jmethodID get_method = (*env)->GetMethodID(env, map_class, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
@@ -237,11 +252,10 @@ jobject bsg_get_item_from_map(JNIEnv *env, jobject map, jobject key) {
     return (*env)->CallObjectMethod(env, map, get_method, key);
 }
 
-
-void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value);
-void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value);
-
-void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* base, jobject value) {
+/**
+ * Adds the contents of given map value to the given JSON object
+ */
+void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value) {
 
     // loop over all the items in the map and add them
     int size = bsg_get_map_size(env, value);
@@ -257,7 +271,7 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* base, jobject value) {
 
             const char* element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, JNI_FALSE);
 
-            bsg_add_meta_data_item(env, base, element_key_str, element_value);
+            bsg_add_meta_data_item(env, object, element_key_str, element_value);
 
             (*env)->DeleteLocalRef(env, element_key);
             (*env)->DeleteLocalRef(env, element_value);
@@ -265,7 +279,10 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* base, jobject value) {
     }
 }
 
-void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* base, jarray value) {
+/**
+ * Adds the contents of given array the given JSON array
+ */
+void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* array, jarray value) {
 
     // loop over all the items in the map and add them
     int size = (*env)->GetArrayLength(env, value);
@@ -279,63 +296,66 @@ void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* base, jarray value) {
             jint* elements = (*env)->GetIntArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[S") == 0) {
             jshort* elements = (*env)->GetShortArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[D") == 0) {
             jdouble* elements = (*env)->GetDoubleArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[F") == 0) {
             jfloat* elements = (*env)->GetFloatArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[J") == 0) {
             jlong* elements = (*env)->GetLongArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[B") == 0) {
             jbyte* elements = (*env)->GetByteArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[Z") == 0) {
             jboolean* elements = (*env)->GetBooleanArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_array_set_bool(base, elements[i]);
+                bugsnag_array_set_bool(array, elements[i]);
             }
         } else if (strcmp(array_type_name, "[C") == 0) {
             jchar* elements = (*env)->GetCharArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
                 // TODO: convert to a single character string?
-                bugsnag_array_set_number(base, elements[i]);
+                bugsnag_array_set_number(array, elements[i]);
             }
         } else {
 
             for (i = 0; i < size; i++) {
                 jobject element_value = (*env)->GetObjectArrayElement(env, value, i);
 
-                bsg_add_meta_data_array_item(env, base, element_value);
+                bsg_add_meta_data_array_item(env, array, element_value);
                 (*env)->DeleteLocalRef(env, element_value);
             }
         }
     }
 }
 
+/**
+ * Gets an array of items from the given collection
+ */
 jarray bsg_get_meta_data_array_from_collection(JNIEnv *env, jobject value) {
     // Get the object array from the collection
     jclass collection_class = (*env)->FindClass(env, "java/util/Collection");
@@ -347,10 +367,16 @@ jarray bsg_get_meta_data_array_from_collection(JNIEnv *env, jobject value) {
     return array;
 }
 
-const char* bsg_get_meta_data_string(JNIEnv *env, jobject value) {
+/**
+ * Gets a char* from the given jstring
+ */
+const char* bsg_get_meta_data_string(JNIEnv *env, jstring value) {
     return (*env)->GetStringUTFChars(env, (jstring)value, JNI_FALSE);
 }
 
+/**
+ * Gets an int from the given Integer object
+ */
 jint bsg_get_meta_data_int(JNIEnv *env, jobject value) {
     jclass integer_class = (*env)->FindClass(env, "java/lang/Integer");
     jmethodID get_value_method = (*env)->GetMethodID(env, integer_class, "intValue", "()I");
@@ -360,6 +386,9 @@ jint bsg_get_meta_data_int(JNIEnv *env, jobject value) {
     return (*env)->CallIntMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a float from the given Float object
+ */
 jfloat bsg_get_meta_data_float(JNIEnv *env, jobject value) {
     jclass float_class = (*env)->FindClass(env, "java/lang/Float");
     jmethodID get_value_method = (*env)->GetMethodID(env, float_class, "floatValue", "()F");
@@ -369,6 +398,9 @@ jfloat bsg_get_meta_data_float(JNIEnv *env, jobject value) {
     return (*env)->CallFloatMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a double from the given Double object
+ */
 jdouble bsg_get_meta_data_double(JNIEnv *env, jobject value) {
     jclass double_class = (*env)->FindClass(env, "java/lang/Double");
     jmethodID get_value_method = (*env)->GetMethodID(env, double_class, "doubleValue", "()D");
@@ -378,6 +410,9 @@ jdouble bsg_get_meta_data_double(JNIEnv *env, jobject value) {
     return (*env)->CallDoubleMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a long from the given Long object
+ */
 jlong bsg_get_meta_data_long(JNIEnv *env, jobject value) {
     jclass long_class = (*env)->FindClass(env, "java/lang/Long");
     jmethodID get_value_method = (*env)->GetMethodID(env, long_class, "longValue", "()J");
@@ -387,6 +422,9 @@ jlong bsg_get_meta_data_long(JNIEnv *env, jobject value) {
     return (*env)->CallLongMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a char from the given Character object
+ */
 jchar bsg_get_meta_data_character(JNIEnv *env, jobject value) {
     jclass char_class = (*env)->FindClass(env, "java/lang/Character");
     jmethodID get_value_method = (*env)->GetMethodID(env, char_class, "charValue", "()C");
@@ -396,6 +434,9 @@ jchar bsg_get_meta_data_character(JNIEnv *env, jobject value) {
     return (*env)->CallCharMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a byte from the given Byte object
+ */
 jbyte bsg_get_meta_data_byte(JNIEnv *env, jobject value) {
     jclass byte_class = (*env)->FindClass(env, "java/lang/Byte");
     jmethodID get_value_method = (*env)->GetMethodID(env, byte_class, "byteValue", "()B");
@@ -405,6 +446,9 @@ jbyte bsg_get_meta_data_byte(JNIEnv *env, jobject value) {
     return (*env)->CallByteMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a short from the given Short object
+ */
 jshort bsg_get_meta_data_short(JNIEnv *env, jobject value) {
     jclass short_class = (*env)->FindClass(env, "java/lang/Short");
     jmethodID get_value_method = (*env)->GetMethodID(env, short_class, "shortValue", "()S");
@@ -414,6 +458,9 @@ jshort bsg_get_meta_data_short(JNIEnv *env, jobject value) {
     return (*env)->CallShortMethod(env, value, get_value_method);
 }
 
+/**
+ * Gets a boolean from the given Boolean object
+ */
 jboolean bsg_get_meta_data_boolean(JNIEnv *env, jobject value) {
     jclass bool_class = (*env)->FindClass(env, "java/lang/Boolean");
     jmethodID get_value_method = (*env)->GetMethodID(env, bool_class, "booleanValue", "()Z");
@@ -427,129 +474,116 @@ jboolean bsg_get_meta_data_boolean(JNIEnv *env, jobject value) {
  * Adds the given value to the given object
  */
 void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value) {
-    const char * type_name = get_class_name(env, value);
-
-    jclass map_class = (*env)->FindClass(env, "java/util/Map");
-    jclass colleciton_class = (*env)->FindClass(env, "java/util/Collection");
-
-    if (string_starts_with(type_name, "[")) {
+    if (is_array(env, value)) {
         // Create a new section with the given key
         JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
         bsg_add_meta_data_array(env, new_array, value);
-    } else if ((*env)->IsInstanceOf(env, value, colleciton_class)) {
+    } else if (is_instance_of(env, value, "java/util/Collection")) {
         // Create a new section with the given key
         JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
         jarray array = bsg_get_meta_data_array_from_collection(env, value);
         bsg_add_meta_data_array(env, new_array, array);
         (*env)->DeleteLocalRef(env, array);
-    } else if ((*env)->IsInstanceOf(env, value, map_class)) {
+    } else if (is_instance_of(env, value, "java/util/Map")) {
         // Create a new section with the given key
         JSON_Object* new_section = bugsnag_object_add_object(object, key);
 
         bsg_add_meta_data_map(env, new_section, value);
-    } else if (strcmp(type_name, "java.lang.String") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/String")) {
         const char* value_str = bsg_get_meta_data_string(env, value);
         bugsnag_object_set_string(object, key, value_str);
-    } else if (strcmp(type_name, "java.lang.Integer") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Integer")) {
         jint value_int = bsg_get_meta_data_int(env, value);
         bugsnag_object_set_number(object, key, value_int);
-    } else if (strcmp(type_name, "java.lang.Float") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Float")) {
         jfloat value_float = bsg_get_meta_data_float(env, value);
         bugsnag_object_set_number(object, key, value_float);
-    } else if (strcmp(type_name, "java.lang.Double") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Double")) {
         jdouble value_double = bsg_get_meta_data_double(env, value);
         bugsnag_object_set_number(object, key, value_double);
-    } else if (strcmp(type_name, "java.lang.Long") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Long")) {
         jlong value_long = bsg_get_meta_data_long(env, value);
         bugsnag_object_set_number(object, key, value_long);
-    } else if (strcmp(type_name, "java.lang.Character") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Character")) {
         jchar value_char = bsg_get_meta_data_character(env, value);
         // TODO: convert the char to a single character string??
         bugsnag_object_set_number(object, key, value_char);
-    } else if (strcmp(type_name, "java.lang.Byte") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Byte")) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
         bugsnag_object_set_number(object, key, value_byte);
-    } else if (strcmp(type_name, "java.lang.Short") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Short")) {
         jshort value_short = bsg_get_meta_data_short(env, value);
         bugsnag_object_set_number(object, key, value_short);
-    } else if (strcmp(type_name, "java.lang.Boolean") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Boolean")) {
         jboolean value_boolean = bsg_get_meta_data_boolean(env, value);
         bugsnag_object_set_bool(object, key, value_boolean);
     } else {
+        const char * type_name = get_class_name(env, value);
+
         BUGSNAG_LOG("unsupported type %s", type_name);
 
         bugsnag_object_set_string(object, key, type_name);
     }
-
-    (*env)->DeleteLocalRef(env, map_class);
-    (*env)->DeleteLocalRef(env, colleciton_class);
 }
 
 /**
  * Addes the given value to the given array
  */
 void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value) {
-    const char * type_name = get_class_name(env, value);
-
-    jclass map_class = (*env)->FindClass(env, "java/util/Map");
-    jclass colleciton_class = (*env)->FindClass(env, "java/util/Collection");
-
-    if (string_starts_with(type_name, "[")) {
+    if (is_array(env, value)) {
         // Create a new array
         JSON_Array* new_array = bugsnag_array_add_array(array);
 
         bsg_add_meta_data_array(env, new_array, value);
-    } else if ((*env)->IsInstanceOf(env, value, colleciton_class)) {
+    } else if (is_instance_of(env, value, "java/util/Collection")) {
         // Create a new array
         JSON_Array* new_array = bugsnag_array_add_array(array);
 
         jarray array_values = bsg_get_meta_data_array_from_collection(env, value);
         bsg_add_meta_data_array(env, new_array, array_values);
         (*env)->DeleteLocalRef(env, array_values);
-    } else if ((*env)->IsInstanceOf(env, value, map_class)) {
+    } else if (is_instance_of(env, value, "java/util/Map")) {
         // Create a new object
         JSON_Object* new_object = bugsnag_array_add_object(array);
 
         bsg_add_meta_data_map(env, new_object, value);
-    } else if (strcmp(type_name, "java.lang.String") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/String")) {
         const char* value_str = bsg_get_meta_data_string(env, value);
         bugsnag_array_set_string(array, value_str);
-    } else if (strcmp(type_name, "java.lang.Integer") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Integer")) {
         jint value_int = bsg_get_meta_data_int(env, value);
         bugsnag_array_set_number(array, value_int);
-    } else if (strcmp(type_name, "java.lang.Float") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Float")) {
         jfloat value_float = bsg_get_meta_data_float(env, value);
         bugsnag_array_set_number(array, value_float);
-    } else if (strcmp(type_name, "java.lang.Double") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Double")) {
         jdouble value_double = bsg_get_meta_data_double(env, value);
         bugsnag_array_set_number(array, value_double);
-    } else if (strcmp(type_name, "java.lang.Long") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Long")) {
         jlong value_long = bsg_get_meta_data_long(env, value);
         bugsnag_array_set_number(array, value_long);
-    } else if (strcmp(type_name, "java.lang.Character") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Character")) {
         jchar value_char = bsg_get_meta_data_character(env, value);
         // TODO: convert the char to a single character string??
         bugsnag_array_set_number(array, value_char);
-    } else if (strcmp(type_name, "java.lang.Byte") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Byte")) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
         bugsnag_array_set_number(array, value_byte);
-    } else if (strcmp(type_name, "java.lang.Short") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Short")) {
         jshort value_short = bsg_get_meta_data_short(env, value);
         bugsnag_array_set_number(array, value_short);
-    } else if (strcmp(type_name, "java.lang.Boolean") == 0) {
+    } else if (is_instance_of(env, value, "java/lang/Boolean")) {
         jboolean value_boolean = bsg_get_meta_data_boolean(env, value);
         bugsnag_array_set_bool(array, value_boolean);
     } else {
+        const char * type_name = get_class_name(env, value);
+
         BUGSNAG_LOG("unsupported type %s", type_name);
         bugsnag_array_set_string(array, type_name);
     }
-
-    (*env)->DeleteLocalRef(env, map_class);
-    (*env)->DeleteLocalRef(env, colleciton_class);
 }
-
 
 /**
  * Gets the meta data from the client class and pre-populates the bugsnag error
