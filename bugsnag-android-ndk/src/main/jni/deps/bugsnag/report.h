@@ -187,69 +187,89 @@ void bugsnag_event_delete(bsg_event *event, bsg_event_section section,
                           char *key);
 
 /**
- * Gets the tab to add items to from the meta data
+ * Append custom diagnostic data to a report in a specified section
  */
-JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event);
-
-/**
- * Clears all data from the meta data
- */
-void bugsnag_event_clear_metadata_base(bsg_event *event);
-
-/**
- * Adds a new object with the given name, to the given object
- */
-JSON_Object* bugsnag_event_add_meta_data_object_object(JSON_Object* section, const char *name);
-
-/**
- * Adds a new object to the given array
- */
-JSON_Object* bugsnag_event_add_meta_data_array_object(JSON_Array* section);
-
-/**
- * Adds a new array with the given name, to the given object
- */
-JSON_Array* bugsnag_event_add_meta_data_object_array(JSON_Object* section, const char *name);
-
-/**
- * Adds a new array to the given array
- */
-JSON_Array* bugsnag_event_add_meta_data_array_array(JSON_Array* section);
-
-/**
- * Gets or adds a new array with the given name, to the given section
- */
-JSON_Array* bugsnag_event_get_meta_data_array(JSON_Object* section, const char *name);
+void bugsnag_event_set_metadata_string(bsg_event *event, char *section,
+                                       char *key, char *value);
 
 /**
  * Append custom diagnostic data to a report in a specified section
  */
-void bugsnag_event_set_metadata_string(JSON_Object* section, const char *key, const char *value);
+void bugsnag_event_set_metadata_number(bsg_event *event, char *section,
+                                       char *key, double value);
 
 /**
  * Append custom diagnostic data to a report in a specified section
  */
-void bugsnag_event_set_metadata_number(JSON_Object* section, const char *key, double value);
-
-/**
- * Append custom diagnostic data to a report in a specified section
- */
-void bugsnag_event_set_metadata_bool(JSON_Object* section, const char *key, int value);
+void bugsnag_event_set_metadata_bool(bsg_event *event, char *section, char *key, int value);
 
 /**
  * Delete a value from the custom diagnostics section of the report.
  */
 void bugsnag_event_delete_metadata(bsg_event *event, char *section, char *key);
+
 /**
  * Delete custom diagnostic data from a report for a specified section
  */
 void bugsnag_event_delete_metadata_section(bsg_event *event, char *section);
 
-void bugsnag_event_set_metadata_array_string(JSON_Array* section, const char *value);
+/**
+ * Gets the base object for meta data from an event
+ */
+JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event);
 
-void bugsnag_event_set_metadata_array_number(JSON_Array* section, double value);
+/**
+ * Clears all meta data from an event
+ */
+void bugsnag_event_clear_metadata_base(bsg_event *event);
 
-void bugsnag_event_set_metadata_array_bool(JSON_Array* section, int value);
+/**
+ * Adds a new JSON object to the given JSON object
+ */
+JSON_Object* bugsnag_object_add_object(JSON_Object* object, const char *name);
 
+/**
+ * Adds a new JSON array to the given JSON object
+ */
+JSON_Array* bugsnag_object_add_array(JSON_Object* object, const char *name);
 
+/**
+ * Adds a new string to the given JSON object
+ */
+void bugsnag_object_set_string(JSON_Object* object, const char *key, const char *value);
+
+/**
+ * Adds a new number to the given JSON object
+ */
+void bugsnag_object_set_number(JSON_Object* object, const char *key, double value);
+
+/**
+ * Adds a new boolean to the given JSON object
+ */
+void bugsnag_object_set_bool(JSON_Object* object, const char *key, int value);
+
+/**
+ * Adds a new JSON object to the given JSON array
+ */
+JSON_Object* bugsnag_array_add_object(JSON_Array* array);
+
+/**
+ * Adds a new JSON array to the given JSON array
+ */
+JSON_Array* bugsnag_array_add_array(JSON_Array* array);
+
+/**
+ * Adds a new string to the given JSON array
+ */
+void bugsnag_array_set_string(JSON_Array* array, const char *value);
+
+/**
+ * Adds a new number to the given JSON array
+ */
+void bugsnag_array_set_number(JSON_Array* array, double value);
+
+/**
+ * Adds a new boolean to the given JSON array
+ */
+void bugsnag_array_set_bool(JSON_Array* array, int value);
 #endif

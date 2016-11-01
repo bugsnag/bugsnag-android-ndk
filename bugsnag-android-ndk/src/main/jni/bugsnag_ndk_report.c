@@ -218,8 +218,8 @@ jobject bsg_get_item_from_map(JNIEnv *env, jobject map, jobject key) {
 }
 
 
-void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* base, const char* key, jobject value);
-void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* base, jobject value);
+void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value);
+void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value);
 
 void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* base, jobject value) {
 
@@ -259,50 +259,50 @@ void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* base, jarray value) {
             jint* elements = (*env)->GetIntArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[S") == 0) {
             jshort* elements = (*env)->GetShortArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[D") == 0) {
             jdouble* elements = (*env)->GetDoubleArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[F") == 0) {
             jfloat* elements = (*env)->GetFloatArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[J") == 0) {
             jlong* elements = (*env)->GetLongArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[B") == 0) {
             jbyte* elements = (*env)->GetByteArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[Z") == 0) {
             jboolean* elements = (*env)->GetBooleanArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                bugsnag_event_set_metadata_array_bool(base, elements[i]);
+                bugsnag_array_set_bool(base, elements[i]);
             }
         } else if (strcmp(array_type_name, "[C") == 0) {
             jchar* elements = (*env)->GetCharArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
                 // TODO: convert to a single character string?
-                bugsnag_event_set_metadata_array_number(base, elements[i]);
+                bugsnag_array_set_number(base, elements[i]);
             }
         } else {
 
@@ -392,98 +392,104 @@ jboolean bsg_get_meta_data_boolean(JNIEnv *env, jobject value) {
     return (*env)->CallBooleanMethod(env, value, get_value_method);
 }
 
-void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* base, const char* key, jobject value) {
+/**
+ * Adds the given value to the given object
+ */
+void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value) {
     const char * type_name = get_class_name(env, value);
 
     if (string_starts_with(type_name, "[")) {
         // Create a new section with the given key
-        JSON_Array* new_array = bugsnag_event_add_meta_data_object_array(base, key);
+        JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
         bsg_add_meta_data_array(env, new_array, value);
     } else if (string_ends_with(type_name, "Map")) {
         // Create a new section with the given key
-        JSON_Object* new_section = bugsnag_event_add_meta_data_object_object(base, key);
+        JSON_Object* new_section = bugsnag_object_add_object(object, key);
 
         bsg_add_meta_data_map(env, new_section, value);
     } else if (strcmp(type_name, "java.lang.String") == 0) {
         const char* value_str = bsg_get_meta_data_string(env, value);
-        bugsnag_event_set_metadata_string(base, key, value_str);
+        bugsnag_object_set_string(object, key, value_str);
     } else if (strcmp(type_name, "java.lang.Integer") == 0) {
         jint value_int = bsg_get_meta_data_int(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_int);
+        bugsnag_object_set_number(object, key, value_int);
     } else if (strcmp(type_name, "java.lang.Float") == 0) {
         jfloat value_float = bsg_get_meta_data_float(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_float);
+        bugsnag_object_set_number(object, key, value_float);
     } else if (strcmp(type_name, "java.lang.Double") == 0) {
         jdouble value_double = bsg_get_meta_data_double(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_double);
+        bugsnag_object_set_number(object, key, value_double);
     } else if (strcmp(type_name, "java.lang.Long") == 0) {
         jlong value_long = bsg_get_meta_data_long(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_long);
+        bugsnag_object_set_number(object, key, value_long);
     } else if (strcmp(type_name, "java.lang.Character") == 0) {
         jchar value_char = bsg_get_meta_data_character(env, value);
         // TODO: convert the char to a single character string??
-        bugsnag_event_set_metadata_number(base, key, value_char);
+        bugsnag_object_set_number(object, key, value_char);
     } else if (strcmp(type_name, "java.lang.Byte") == 0) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_byte);
+        bugsnag_object_set_number(object, key, value_byte);
     } else if (strcmp(type_name, "java.lang.Short") == 0) {
         jshort value_short = bsg_get_meta_data_short(env, value);
-        bugsnag_event_set_metadata_number(base, key, value_short);
+        bugsnag_object_set_number(object, key, value_short);
     } else if (strcmp(type_name, "java.lang.Boolean") == 0) {
         jboolean value_boolean = bsg_get_meta_data_boolean(env, value);
-        bugsnag_event_set_metadata_bool(base, key, value_boolean);
+        bugsnag_object_set_bool(object, key, value_boolean);
     } else {
         BUGSNAG_LOG("unsupported type %s", type_name);
 
-        bugsnag_event_set_metadata_string(base, key, type_name);
+        bugsnag_object_set_string(object, key, type_name);
     }
 }
 
-void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* base, jobject value) {
+/**
+ * Addes the given value to the given array
+ */
+void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value) {
     const char * type_name = get_class_name(env, value);
 
     if (string_starts_with(type_name, "[")) {
         // Create a new section with the given key
-        JSON_Array* new_array = bugsnag_event_add_meta_data_array_array(base);
+        JSON_Array* new_array = bugsnag_array_add_array(array);
 
         bsg_add_meta_data_array(env, new_array, value);
     } else if (string_ends_with(type_name, "Map")) {
         // Create a new section with the given key
-        JSON_Object* new_section = bugsnag_event_add_meta_data_array_object(base);
+        JSON_Object* new_section = bugsnag_array_add_object(array);
 
         bsg_add_meta_data_map(env, new_section, value);
     } else if (strcmp(type_name, "java.lang.String") == 0) {
         const char* value_str = bsg_get_meta_data_string(env, value);
-        bugsnag_event_set_metadata_array_string(base, value_str);
+        bugsnag_array_set_string(array, value_str);
     } else if (strcmp(type_name, "java.lang.Integer") == 0) {
         jint value_int = bsg_get_meta_data_int(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_int);
+        bugsnag_array_set_number(array, value_int);
     } else if (strcmp(type_name, "java.lang.Float") == 0) {
         jfloat value_float = bsg_get_meta_data_float(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_float);
+        bugsnag_array_set_number(array, value_float);
     } else if (strcmp(type_name, "java.lang.Double") == 0) {
         jdouble value_double = bsg_get_meta_data_double(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_double);
+        bugsnag_array_set_number(array, value_double);
     } else if (strcmp(type_name, "java.lang.Long") == 0) {
         jlong value_long = bsg_get_meta_data_long(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_long);
+        bugsnag_array_set_number(array, value_long);
     } else if (strcmp(type_name, "java.lang.Character") == 0) {
         jchar value_char = bsg_get_meta_data_character(env, value);
         // TODO: convert the char to a single character string??
-        bugsnag_event_set_metadata_array_number(base, value_char);
+        bugsnag_array_set_number(array, value_char);
     } else if (strcmp(type_name, "java.lang.Byte") == 0) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_byte);
+        bugsnag_array_set_number(array, value_byte);
     } else if (strcmp(type_name, "java.lang.Short") == 0) {
         jshort value_short = bsg_get_meta_data_short(env, value);
-        bugsnag_event_set_metadata_array_number(base, value_short);
+        bugsnag_array_set_number(array, value_short);
     } else if (strcmp(type_name, "java.lang.Boolean") == 0) {
         jboolean value_boolean = bsg_get_meta_data_boolean(env, value);
-        bugsnag_event_set_metadata_array_bool(base, value_boolean);
+        bugsnag_array_set_bool(array, value_boolean);
     } else {
         BUGSNAG_LOG("unsupported type %s", type_name);
-        bugsnag_event_set_metadata_array_string(base, type_name);
+        bugsnag_array_set_string(array, type_name);
     }
 }
 
