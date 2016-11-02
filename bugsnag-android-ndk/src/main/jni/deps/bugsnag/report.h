@@ -181,11 +181,17 @@ void bugsnag_breadcrumb_add_metadata(bsg_breadcrumb *crumb, char *key,
                                      char *value);
 
 typedef enum { BSG_DEVICE, BSG_APP, BSG_REQUEST, BSG_USER } bsg_event_section;
+
 /**
  * Append a string value to the specified diagnostics section of the event.
  */
 void bugsnag_event_set_string(bsg_event *event, bsg_event_section section,
                               char *key, char *value);
+/**
+ * Gets a string that has been stored in the specified diagnostics section of the event.
+ */
+const char* bugsnag_event_get_string(bsg_event *event, bsg_event_section section, char *key);
+
 /**
  * Append an int value to the specified diagnostics section of the event.
  */

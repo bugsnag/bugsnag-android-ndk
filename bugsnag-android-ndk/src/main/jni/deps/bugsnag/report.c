@@ -165,6 +165,12 @@ void bugsnag_event_set_string(bsg_event *event, bsg_event_section section,
   json_object_set_string(section_obj, key, value);
 }
 
+const char* bugsnag_event_get_string(bsg_event *event, bsg_event_section section, char *key) {
+  JSON_Object *section_obj =
+          _event_section(event->diagnostics, _event_section_name(section));
+  return json_object_get_string(section_obj, key);
+}
+
 void bugsnag_event_set_bool(bsg_event *event, bsg_event_section section,
                             char *key, int value) {
   JSON_Object *section_obj =

@@ -49,81 +49,108 @@ int startsWith(const char *pre, const char *str)
 }
 
 /**
+ * Checks to see if Bugsnag should be notified for this release stage
+ */
+int should_notify_for_release_stage(const char* release_stage) {
+
+    struct bugsnag_ndk_string_array stages = g_bugsnag_report->notify_release_stages;
+
+    if (stages.size > 0) {
+        for (int i = 0; i <stages.size; i++) {
+            if (strcmp(stages.values[i], release_stage) == 0) {
+                return 1;
+            }
+        }
+
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+/**
  * Handles signals when errors occur and writes a file to the Bugsnag error cache
  */
 static void bugsnag_signal_handler(int code, struct siginfo *si, void *sc) {
     BUGSNAG_LOG("In bugsnag_signal_handler with signal %d", si->si_signo);
 
-    int frames_size = bugsnag_unwind_stack(g_native_code, BUGSNAG_FRAMES_MAX, si, sc);
+    // check to see if this error should be notified
+    const char* release_stage = bugsnag_event_get_string(g_bugsnag_report->event, BSG_APP, "releaseStage");
+    if (should_notify_for_release_stage(release_stage)) {
 
-    // Create an exception message and class
-    bsg_exception *exception = g_bugsnag_report->exception;
-    sprintf(exception->message,"Fatal signal from native code: %d (%s)", si->si_signo, strsignal(si->si_signo));
-    sprintf(exception->name, "%s", strsignal(si->si_signo));
+        int frames_size = bugsnag_unwind_stack(g_native_code, BUGSNAG_FRAMES_MAX, si, sc);
 
-    // Ignore the first 2 frames (handler code)
-    int project_frames = frames_size - BUGSNAG_FRAMES_TO_IGNORE;
+        // Create an exception message and class
+        bsg_exception *exception = g_bugsnag_report->exception;
+        sprintf(exception->message, "Fatal signal from native code: %d (%s)", si->si_signo,
+                strsignal(si->si_signo));
+        sprintf(exception->name, "%s", strsignal(si->si_signo));
 
-    if (project_frames > 0) {
+        // Ignore the first 2 frames (handler code)
+        int project_frames = frames_size - BUGSNAG_FRAMES_TO_IGNORE;
 
-        // populate stack frame element array
-        int i;
-        for (i = 0; i < project_frames; i++) {
+        if (project_frames > 0) {
 
-            unwind_struct_frame *unwind_frame = &g_native_code->frames[i + BUGSNAG_FRAMES_TO_IGNORE];
+            // populate stack frame element array
+            int i;
+            for (i = 0; i < project_frames; i++) {
 
-            Dl_info info;
-            if (dladdr(unwind_frame->frame_pointer, &info) != 0) {
+                unwind_struct_frame *unwind_frame = &g_native_code->frames[i +
+                                                                           BUGSNAG_FRAMES_TO_IGNORE];
 
-                bsg_stackframe frame;
+                Dl_info info;
+                if (dladdr(unwind_frame->frame_pointer, &info) != 0) {
 
-                if (info.dli_fname != NULL) {
-                    frame.file = info.dli_fname;
+                    bsg_stackframe frame;
+
+                    if (info.dli_fname != NULL) {
+                        frame.file = info.dli_fname;
+                    }
+
+                    // use the method from unwind if there is one
+                    if (strlen(unwind_frame->method) > 1) {
+                        frame.method = unwind_frame->method;
+                    } else {
+                        frame.method = info.dli_sname;
+                    }
+
+                    // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
+                    frame.load_address = (uintptr_t) info.dli_fbase;
+                    frame.symbol_address = (uintptr_t) info.dli_saddr;
+                    frame.frame_address = (uintptr_t) unwind_frame->frame_pointer;
+
+                    uintptr_t file_offset =
+                            (uintptr_t) unwind_frame->frame_pointer - (uintptr_t) info.dli_fbase;
+                    frame.line_number = (int) file_offset;
+
+                    //BUGSNAG_LOG("%i, %s %s %d", i, frame.file, frame.method, frame.line_number);
+
+                    // Check if this is a system file, or handler function
+                    if (is_system_file(frame.file)
+                        || is_system_method(frame.method)) {
+                        frame.in_project = 0;
+                    } else {
+                        frame.in_project = 1;
+                    }
+
+                    bugsnag_exception_add_frame(exception, frame);
                 }
-
-                // use the method from unwind if there is one
-                if (strlen(unwind_frame->method) > 1) {
-                    frame.method = unwind_frame->method;
-                } else {
-                    frame.method = info.dli_sname;
-                }
-
-                // Attempt to calculate the line numbers TODO: this gets the position in the file in bytes
-                frame.load_address = (uintptr_t)info.dli_fbase;
-                frame.symbol_address = (uintptr_t)info.dli_saddr;
-                frame.frame_address = (uintptr_t)unwind_frame->frame_pointer;
-
-                uintptr_t file_offset = (uintptr_t)unwind_frame->frame_pointer - (uintptr_t)info.dli_fbase;
-                frame.line_number = (int)file_offset;
-
-                //BUGSNAG_LOG("%i, %s %s %d", i, frame.file, frame.method, frame.line_number);
-
-                // Check if this is a system file, or handler function
-                if (is_system_file(frame.file)
-                    || is_system_method(frame.method)) {
-                    frame.in_project = 0;
-                } else {
-                    frame.in_project = 1;
-                }
-
-                bugsnag_exception_add_frame(exception, frame);
             }
         }
-    }
 
-    // Create a filename for the error
-    time_t now = time(NULL);
-    char filename[strlen(g_bugsnag_report->error_store_path) + 20];
-    sprintf(filename, "%s%ld.json", g_bugsnag_report->error_store_path, now);
-    FILE* file = fopen(filename, "w+");
+        // Create a filename for the error
+        time_t now = time(NULL);
+        char filename[strlen(g_bugsnag_report->error_store_path) + 20];
+        sprintf(filename, "%s%ld.json", g_bugsnag_report->error_store_path, now);
+        FILE *file = fopen(filename, "w+");
 
-    if (file != NULL)
-    {
-        char *payload = bugsnag_serialize_event(g_bugsnag_report->event);
-        fputs(payload, file);
+        if (file != NULL) {
+            char *payload = bugsnag_serialize_event(g_bugsnag_report->event);
+            fputs(payload, file);
 
-        fflush(file);
-        fclose(file);
+            fflush(file);
+            fclose(file);
+        }
     }
 
     /* Call previous handler. */

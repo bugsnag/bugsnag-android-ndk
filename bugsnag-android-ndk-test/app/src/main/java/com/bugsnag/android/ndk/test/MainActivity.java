@@ -46,7 +46,8 @@ public class MainActivity extends Activity {
 
         Bugsnag.init(this, config);
 
-        Bugsnag.setFilters("KeyString","intArrayKey","submapKey");
+        Bugsnag.setFilters("KeyString","intArrayKey");
+        Bugsnag.setNotifyReleaseStages("production", "development");
 
         Bugsnag.getMetaData().addToTab("tab1", "KeyString", "StringValue1");
         Bugsnag.getMetaData().addToTab("tab1", "KeyShort", new Short("12"));
@@ -64,9 +65,9 @@ public class MainActivity extends Activity {
         mapValue.put("KeyIntArray", new int[] {4,6,1});
         mapValue.put("KeyObjArray", new Object[] {"StringValue3", 12346F, true});
 
-        Map<String, Object> submapValue = new HashMap<>();
-        submapValue.put("KeyString2", "StringValue2");
-        submapValue.put("KeyInt2", 123456);
+        Map<Object, Object> submapValue = new HashMap<>();
+        submapValue.put(ob, "StringValue2");
+        submapValue.put(34343, 123456);
         mapValue.put("submapKey", submapValue);
 
         Bugsnag.getMetaData().addToTab("tab1", "mapKey", mapValue);
@@ -123,10 +124,6 @@ public class MainActivity extends Activity {
         values2.put("KeyString3", "StringValue3");
         values2.put("KeyString4", "StringValue4");
         Bugsnag.leaveBreadcrumb("Something else happened here", BreadcrumbType.MANUAL, values2);
-
-
-        Bugsnag.setNotifyReleaseStages("release", "dev");
-
 
 
         // Set the user information
