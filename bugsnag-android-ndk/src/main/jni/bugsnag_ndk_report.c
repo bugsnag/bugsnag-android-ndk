@@ -591,7 +591,6 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event, struct bugsnag_ndk_st
     (*env)->DeleteLocalRef(env, meta_data_value);
 }
 
-
 /**
  * Gets the user details from the client class and pre-populates the bugsnag error
  */
@@ -697,11 +696,17 @@ bsg_breadcrumb_t bsg_get_breadcrumb_type(JNIEnv *env, jobject type) {
     }
 }
 
+/**
+ * Constants used for calculating times
+ */
 const int SecondsPerMinute = 60;
 const int SecondsPerHour = 3600;
 const int SecondsPerDay = 86400;
 const int DaysOfMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
+/**
+ * Checks if the given year is a leap year
+ */
 int IsLeapYear(int year)
 {
     if (year % 4 != 0) return 0;
@@ -709,6 +714,11 @@ int IsLeapYear(int year)
     return (year % 400) == 0;
 }
 
+/**
+ * Creates a time_t from a tm structure that is in UTC
+ * NOTE: this is needed because the standard mktime() method will use the local timezone
+ * and we need all the dates in UTC
+ */
 static time_t mkgmtime(const struct tm *ptm) {
     time_t secs = 0;
     // tm_year is years since 1900
@@ -728,9 +738,13 @@ static time_t mkgmtime(const struct tm *ptm) {
     return secs;
 }
 
+/**
+ * Constructs a time_t from the given time String (must be in format "yyyy-MM-dd'T'HH:mm:ss'Z'"
+ * that the Java code outputs
+ */
 time_t bsg_get_time_from_string(const char* time_details) {
     struct tm tm;
-    strptime(time_details,"%Y-%m-%dT%H:%M:%S%z" , &tm); /*"yyyy-MM-dd'T'HH:mm:ss'Z'" from Java*/
+    strptime(time_details,"%Y-%m-%dT%H:%M:%S%z" , &tm);
     return mkgmtime(&tm);
 }
 
@@ -870,6 +884,9 @@ void bsg_load_filters(JNIEnv *env, struct bugsnag_ndk_report *report) {
     (*env)->DeleteLocalRef(env, interface_class);
 }
 
+/**
+ * Gets the location to write the error files to
+ */
 char *bsg_load_error_store_path(JNIEnv *env) {
     BUGSNAG_LOG("bsg_load_error_store_path");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");

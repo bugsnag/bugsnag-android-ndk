@@ -161,7 +161,6 @@ static void bugsnag_signal_handler(int code, struct siginfo *si, void *sc) {
     }
 }
 
-
 /**
  * Adds the Bugsnag signal handler
  */
@@ -202,7 +201,6 @@ int setupBugsnag(JNIEnv *env) {
 
     return 0;
 }
-
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_BugsnagObserver_setupBugsnag(JNIEnv *env, jclass type) {
