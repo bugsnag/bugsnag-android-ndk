@@ -17,6 +17,7 @@ public class BugsnagObserver implements Observer {
     public static native void populateDeviceDetails();
     public static native void populateContextDetails();
     public static native void populateReleaseStagesDetails();
+    public static native void populateFilterDetails();
     public static native void populateBreadcumbDetails();
     public static native void populateMetaDataDetails();
 
@@ -48,6 +49,10 @@ public class BugsnagObserver implements Observer {
 
                 case RELEASE_STAGES:
                     populateReleaseStagesDetails();
+                    break;
+
+                case FILTERS:
+                    populateFilterDetails();
                     break;
 
                 case BREADCRUMB:

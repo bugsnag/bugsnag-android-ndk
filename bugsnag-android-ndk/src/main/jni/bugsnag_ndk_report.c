@@ -5,8 +5,8 @@
 #include "bugsnag_ndk.h"
 
 
-void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value);
-void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value);
+void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value, struct bugsnag_ndk_string_array *filters);
+void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value, struct bugsnag_ndk_string_array *filters);
 
 /**
  * Gets the value from a method that returns a string
@@ -77,6 +77,23 @@ int get_method_boolean(JNIEnv *env, jclass class, const char *method_name) {
         return 0;
     }
 }
+
+/**
+ * Gets the string value of a char from java
+ */
+const char *get_string_from_char(JNIEnv *env, jchar value) {
+    jclass char_class = (*env)->FindClass(env, "java/lang/Character");
+    jmethodID to_string_method = (*env)->GetStaticMethodID(env, char_class, "toString", "(C)Ljava/lang/String;");
+    jstring string_value = (*env)->CallStaticObjectMethod(env, char_class, to_string_method, value);
+
+    const char * string = (*env)->GetStringUTFChars(env, string_value, JNI_FALSE);
+
+    (*env)->DeleteLocalRef(env, char_class);
+    (*env)->DeleteLocalRef(env, string_value);
+
+    return string;
+}
+
 /**
  * Gets the class name for the given object
  */
@@ -169,9 +186,25 @@ jobject bsg_get_item_from_map(JNIEnv *env, jobject map, jobject key) {
 }
 
 /**
+ * Checks to see if a given string is in the list of filters
+ */
+int is_in_filters(const char* key, struct bugsnag_ndk_string_array *filters) {
+
+    if (filters) {
+        for (int i = 0; i < filters->size; i++) {
+            if (strcmp(filters->values[i], key) == 0) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/**
  * Adds the contents of given map value to the given JSON object
  */
-void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value) {
+void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value, struct bugsnag_ndk_string_array *filters) {
 
     // loop over all the items in the map and add them
     int size = bsg_get_map_size(env, value);
@@ -184,11 +217,28 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value) {
         for (i = 0; i < size; i++) {
             jobject element_key = (*env)->GetObjectArrayElement(env, key_array_value, i);
             jobject element_value = bsg_get_item_from_map(env, value, element_key);
+            const char* element_key_str;
 
-            // TODO: this assumes that the key is a string
-            const char* element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, JNI_FALSE);
+            if (is_instance_of(env, element_key, "java/lang/String")) {
+                element_key_str = (*env)->GetStringUTFChars(env, (jstring)element_key, JNI_FALSE);
+            } else {
+                // The key is not a string, call toString on the object to get a value to use
+                jclass object_class = (*env)->FindClass(env, "java/lang/Object");
+                jmethodID to_string_method = (*env)->GetMethodID(env, object_class, "toString", "()Ljava/lang/String;");
+                jstring object_string = (*env)->CallObjectMethod(env, element_key, to_string_method);
 
-            bsg_add_meta_data_item(env, object, element_key_str, element_value);
+                element_key_str = (*env)->GetStringUTFChars(env, object_string, JNI_FALSE);
+
+                (*env)->DeleteLocalRef(env, object_class);
+                (*env)->DeleteLocalRef(env, object_string);
+            }
+
+            // If this key is filtered then just display "[FILTERED]"
+            if (is_in_filters(element_key_str, filters)) {
+                bugsnag_object_set_string(object, element_key_str, "[FILTERED]");
+            } else {
+                bsg_add_meta_data_item(env, object, element_key_str, element_value, filters);
+            }
 
             (*env)->DeleteLocalRef(env, element_key);
             (*env)->DeleteLocalRef(env, element_value);
@@ -199,7 +249,7 @@ void bsg_add_meta_data_map(JNIEnv *env, JSON_Object* object, jobject value) {
 /**
  * Adds the contents of given array the given JSON array
  */
-void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* array, jarray value) {
+void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* array, jarray value, struct bugsnag_ndk_string_array *filters) {
 
     // loop over all the items in the map and add them
     int size = (*env)->GetArrayLength(env, value);
@@ -255,15 +305,14 @@ void bsg_add_meta_data_array(JNIEnv *env, JSON_Array* array, jarray value) {
             jchar* elements = (*env)->GetCharArrayElements(env, value, 0);
 
             for (i = 0; i < size; i++) {
-                // TODO: convert to a single character string?
-                bugsnag_array_set_number(array, elements[i]);
+                bugsnag_array_set_string(array, get_string_from_char(env, elements[i]));
             }
         } else {
 
             for (i = 0; i < size; i++) {
                 jobject element_value = (*env)->GetObjectArrayElement(env, value, i);
 
-                bsg_add_meta_data_array_item(env, array, element_value);
+                bsg_add_meta_data_array_item(env, array, element_value, filters);
                 (*env)->DeleteLocalRef(env, element_value);
             }
         }
@@ -390,24 +439,24 @@ jboolean bsg_get_meta_data_boolean(JNIEnv *env, jobject value) {
 /**
  * Adds the given value to the given object
  */
-void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value) {
+void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, jobject value, struct bugsnag_ndk_string_array *filters) {
     if (is_array(env, value)) {
         // Create a new section with the given key
         JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
-        bsg_add_meta_data_array(env, new_array, value);
+        bsg_add_meta_data_array(env, new_array, value, filters);
     } else if (is_instance_of(env, value, "java/util/Collection")) {
         // Create a new section with the given key
         JSON_Array* new_array = bugsnag_object_add_array(object, key);
 
         jarray array = bsg_get_meta_data_array_from_collection(env, value);
-        bsg_add_meta_data_array(env, new_array, array);
+        bsg_add_meta_data_array(env, new_array, array, filters);
         (*env)->DeleteLocalRef(env, array);
     } else if (is_instance_of(env, value, "java/util/Map")) {
         // Create a new section with the given key
         JSON_Object* new_section = bugsnag_object_add_object(object, key);
 
-        bsg_add_meta_data_map(env, new_section, value);
+        bsg_add_meta_data_map(env, new_section, value, filters);
     } else if (is_instance_of(env, value, "java/lang/String")) {
         const char* value_str = bsg_get_meta_data_string(env, value);
         bugsnag_object_set_string(object, key, value_str);
@@ -425,8 +474,7 @@ void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, j
         bugsnag_object_set_number(object, key, value_long);
     } else if (is_instance_of(env, value, "java/lang/Character")) {
         jchar value_char = bsg_get_meta_data_character(env, value);
-        // TODO: convert the char to a single character string??
-        bugsnag_object_set_number(object, key, value_char);
+        bugsnag_object_set_string(object, key, get_string_from_char(env, value_char));
     } else if (is_instance_of(env, value, "java/lang/Byte")) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
         bugsnag_object_set_number(object, key, value_byte);
@@ -448,24 +496,24 @@ void bsg_add_meta_data_item(JNIEnv *env, JSON_Object* object, const char* key, j
 /**
  * Addes the given value to the given array
  */
-void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value) {
+void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value, struct bugsnag_ndk_string_array *filters) {
     if (is_array(env, value)) {
         // Create a new array
         JSON_Array* new_array = bugsnag_array_add_array(array);
 
-        bsg_add_meta_data_array(env, new_array, value);
+        bsg_add_meta_data_array(env, new_array, value, filters);
     } else if (is_instance_of(env, value, "java/util/Collection")) {
         // Create a new array
         JSON_Array* new_array = bugsnag_array_add_array(array);
 
         jarray array_values = bsg_get_meta_data_array_from_collection(env, value);
-        bsg_add_meta_data_array(env, new_array, array_values);
+        bsg_add_meta_data_array(env, new_array, array_values, filters);
         (*env)->DeleteLocalRef(env, array_values);
     } else if (is_instance_of(env, value, "java/util/Map")) {
         // Create a new object
         JSON_Object* new_object = bugsnag_array_add_object(array);
 
-        bsg_add_meta_data_map(env, new_object, value);
+        bsg_add_meta_data_map(env, new_object, value, filters);
     } else if (is_instance_of(env, value, "java/lang/String")) {
         const char* value_str = bsg_get_meta_data_string(env, value);
         bugsnag_array_set_string(array, value_str);
@@ -483,8 +531,7 @@ void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value)
         bugsnag_array_set_number(array, value_long);
     } else if (is_instance_of(env, value, "java/lang/Character")) {
         jchar value_char = bsg_get_meta_data_character(env, value);
-        // TODO: convert the char to a single character string??
-        bugsnag_array_set_number(array, value_char);
+        bugsnag_array_set_string(array, get_string_from_char(env, value_char));
     } else if (is_instance_of(env, value, "java/lang/Byte")) {
         jbyte value_byte = bsg_get_meta_data_byte(env, value);
         bugsnag_array_set_number(array, value_byte);
@@ -505,7 +552,7 @@ void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value)
 /**
  * Gets the meta data from the client class and pre-populates the bugsnag error
  */
-void bsg_populate_meta_data(JNIEnv *env, bsg_event *event) {
+void bsg_populate_meta_data(JNIEnv *env, bsg_event *event, struct bugsnag_ndk_string_array *filters) {
     BUGSNAG_LOG("bsg_populate_meta_data");
 
     // wipe the existing structure
@@ -530,7 +577,7 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event) {
             jobject tab_value = bsg_get_item_from_map(env, meta_data_value, key);
 
             JSON_Object* meta_data = bugsnag_event_get_metadata_base(event);
-            bsg_add_meta_data_item(env, meta_data, tab_name, tab_value);
+            bsg_add_meta_data_item(env, meta_data, tab_name, tab_value, filters);
 
             (*env)->DeleteLocalRef(env, key);
             (*env)->DeleteLocalRef(env, tab_value);
@@ -617,39 +664,208 @@ void bsg_populate_context(JNIEnv *env, bsg_event *event) {
 }
 
 /**
+ * Converts a java breadcrumb type into a bsg_breadcrumb_t
+ */
+bsg_breadcrumb_t bsg_get_breadcrumb_type(JNIEnv *env, jobject type) {
+    jclass breadcrumb_type_class = (*env)->FindClass(env, "com/bugsnag/android/BreadcrumbType");
+    jmethodID to_string_method = (*env)->GetMethodID(env, breadcrumb_type_class, "toString", "()Ljava/lang/String;");
+    jstring breadcrumb_string = (*env)->CallObjectMethod(env, type, to_string_method);
+
+    const char* breadcrumb_type = (*env)->GetStringUTFChars(env, breadcrumb_string, JNI_FALSE);
+
+    (*env)->DeleteLocalRef(env, breadcrumb_type_class);
+    (*env)->DeleteLocalRef(env, breadcrumb_string);
+
+    if (strcmp(breadcrumb_type, "error") == 0) {
+        return BSG_CRUMB_ERROR;
+    } else if (strcmp(breadcrumb_type, "log") == 0) {
+        return BSG_CRUMB_LOG;
+    } else if (strcmp(breadcrumb_type, "manual") == 0) {
+        return BSG_CRUMB_MANUAL;
+    } else if (strcmp(breadcrumb_type, "navigation") == 0) {
+        return BSG_CRUMB_NAVIGATION;
+    } else if (strcmp(breadcrumb_type, "process") == 0) {
+        return BSG_CRUMB_PROCESS;
+    } else if (strcmp(breadcrumb_type, "request") == 0) {
+        return BSG_CRUMB_REQUEST;
+    } else if (strcmp(breadcrumb_type, "state") == 0) {
+        return BSG_CRUMB_STATE;
+    } else if (strcmp(breadcrumb_type, "user") == 0) {
+        return BSG_CRUMB_USER;
+    } else {
+        return BSG_CRUMB_ERROR;
+    }
+}
+
+const int SecondsPerMinute = 60;
+const int SecondsPerHour = 3600;
+const int SecondsPerDay = 86400;
+const int DaysOfMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+int IsLeapYear(int year)
+{
+    if (year % 4 != 0) return 0;
+    if (year % 100 != 0) return 1;
+    return (year % 400) == 0;
+}
+
+static time_t mkgmtime(const struct tm *ptm) {
+    time_t secs = 0;
+    // tm_year is years since 1900
+    int year = ptm->tm_year + 1900;
+    for (int y = 1970; y < year; ++y) {
+        secs += (IsLeapYear(y)? 366: 365) * SecondsPerDay;
+    }
+    // tm_mon is month from 0..11
+    for (int m = 0; m < ptm->tm_mon; ++m) {
+        secs += DaysOfMonth[m] * SecondsPerDay;
+        if (m == 1 && IsLeapYear(year)) secs += SecondsPerDay;
+    }
+    secs += (ptm->tm_mday - 1) * SecondsPerDay;
+    secs += ptm->tm_hour       * SecondsPerHour;
+    secs += ptm->tm_min        * SecondsPerMinute;
+    secs += ptm->tm_sec;
+    return secs;
+}
+
+time_t bsg_get_time_from_string(const char* time_details) {
+    struct tm tm;
+    strptime(time_details,"%Y-%m-%dT%H:%M:%S%z" , &tm); /*"yyyy-MM-dd'T'HH:mm:ss'Z'" from Java*/
+    return mkgmtime(&tm);
+}
+
+/**
  * Gets the breadcrumbs from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
     BUGSNAG_LOG("bsg_populate_breadcrumbs");
+
+    // Clear out existing breadcrumbs
+    bugsnag_event_clear_breadcrumbs(event);
+
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     jmethodID get_breadcrumbs_method = (*env)->GetStaticMethodID(env, interface_class, "getBreadcrumbs", "()[Ljava/lang/Object;");
     jarray breadcrumbs_value = (*env)->CallStaticObjectMethod(env, interface_class, get_breadcrumbs_method);
 
+    jclass breadcrumb_class = (*env)->FindClass(env, "com/bugsnag/android/Breadcrumbs$Breadcrumb");
+    jfieldID timestamp_field = (*env)->GetFieldID(env, breadcrumb_class, "timestamp", "Ljava/lang/String;");
+    jfieldID name_field = (*env)->GetFieldID(env, breadcrumb_class, "name", "Ljava/lang/String;");
+    jfieldID type_field = (*env)->GetFieldID(env, breadcrumb_class, "type", "Lcom/bugsnag/android/BreadcrumbType;");
+    jfieldID meta_data_field = (*env)->GetFieldID(env, breadcrumb_class, "metadata", "Ljava/util/Map;");
+
     // loop over all the items in the map and add them
     int size = (*env)->GetArrayLength(env, breadcrumbs_value);
 
     for (int i = 0; i < size; i++) {
-        jobject element_value = (*env)->GetObjectArrayElement(env, breadcrumbs_value, i);
+        jobject breadcrumb = (*env)->GetObjectArrayElement(env, breadcrumbs_value, i);
 
-        BUGSNAG_LOG("Found breadcrumb %d", i);
+        const char * timestamp = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, timestamp_field));
+        const char * name = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, name_field));
+        jobject breadcrumb_type = (*env)->GetObjectField(env, breadcrumb, type_field);
+        jobject meta_data_value = (*env)->GetObjectField(env, breadcrumb, meta_data_field);
 
-        (*env)->DeleteLocalRef(env, element_value);
+        bsg_breadcrumb *crumb =
+                bugsnag_breadcrumb_init((char *)name, bsg_get_breadcrumb_type(env, breadcrumb_type));
+        crumb->timestamp = bsg_get_time_from_string(timestamp);
+
+        int meta_size = bsg_get_map_size(env, meta_data_value);
+
+        if (meta_size > 0) {
+            jarray key_array_value = bsg_get_map_key_array(env, meta_data_value);
+
+            int j;
+            for (j = 0; j < meta_size; j++) {
+                jstring key_str = (*env)->GetObjectArrayElement(env, key_array_value, j);
+                const char* key = (*env)->GetStringUTFChars(env, key_str, JNI_FALSE);
+
+                jstring value_str = bsg_get_item_from_map(env, meta_data_value, key_str);
+                const char* value = (*env)->GetStringUTFChars(env, value_str, JNI_FALSE);
+
+                bugsnag_object_set_string(json_value_get_object(crumb->metadata), key, value);
+
+                (*env)->DeleteLocalRef(env, key_str);
+                (*env)->DeleteLocalRef(env, value_str);
+            }
+
+            (*env)->DeleteLocalRef(env, key_array_value);
+        }
+
+        bugsnag_event_add_breadcrumb(event, crumb);
+
+        (*env)->DeleteLocalRef(env, breadcrumb);
     }
 
 
     (*env)->DeleteLocalRef(env, breadcrumbs_value);
     (*env)->DeleteLocalRef(env, interface_class);
+    (*env)->DeleteLocalRef(env, breadcrumb_class);
 }
 
 /**
  * Gets the release stages from the client to store for later
  */
-void bsg_load_release_stages(JNIEnv *env) {
+void bsg_load_release_stages(JNIEnv *env, struct bugsnag_ndk_report *report) {
     BUGSNAG_LOG("bsg_load_release_stages");
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
-    // TODO
+    // Clear existing release stages
+    if (report->notify_release_stages.values) {
+        free(report->notify_release_stages.values);
+    }
+
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID get_release_stages_method = (*env)->GetStaticMethodID(env, interface_class, "getReleaseStages", "()[Ljava/lang/String;");
+    jarray release_stages_value = (*env)->CallStaticObjectMethod(env, interface_class, get_release_stages_method);
+
+    if (release_stages_value) {
+        int size = (*env)->GetArrayLength(env, release_stages_value);
+
+        report->notify_release_stages.size = size;
+        report->notify_release_stages.values = calloc(sizeof(const char *), (size_t)size);
+
+        for (int i = 0; i < size; i++) {
+            jstring release_stage_value = (*env)->GetObjectArrayElement(env, release_stages_value, i);
+            const char* release_stage = (*env)->GetStringUTFChars(env, release_stage_value, JNI_FALSE);
+
+            report->notify_release_stages.values[i] = release_stage;
+
+            (*env)->DeleteLocalRef(env, release_stage_value);
+        }
+    }
+
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Gets the filters from the client to store for later
+ */
+void bsg_load_filters(JNIEnv *env, struct bugsnag_ndk_report *report) {
+    BUGSNAG_LOG("bsg_load_filters");
+
+    // Clear existing filters
+    if (report->filters.values) {
+        free(report->filters.values);
+    }
+
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID get_filters_method = (*env)->GetStaticMethodID(env, interface_class, "getFilters", "()[Ljava/lang/String;");
+    jarray filters_value = (*env)->CallStaticObjectMethod(env, interface_class, get_filters_method);
+
+    if (filters_value) {
+        int size = (*env)->GetArrayLength(env, filters_value);
+
+        report->filters.size = size;
+        report->filters.values = calloc(sizeof(const char *), (size_t)size);
+
+        for (int i = 0; i < size; i++) {
+            jstring filter_value = (*env)->GetObjectArrayElement(env, filters_value, i);
+            const char* filter = (*env)->GetStringUTFChars(env, filter_value, JNI_FALSE);
+
+            report->filters.values[i] = filter;
+
+            (*env)->DeleteLocalRef(env, filter_value);
+        }
+    }
 
     (*env)->DeleteLocalRef(env, interface_class);
 }
@@ -679,9 +895,9 @@ void bsg_populate_event_details(JNIEnv *env, struct bugsnag_ndk_report *report) 
     bsg_populate_app_data(env, event);
     bsg_populate_device_data(env, event);
     bsg_populate_breadcrumbs(env, event);
-    bsg_populate_meta_data(env, event);
+    bsg_populate_meta_data(env, event, &report->filters);
 
-    bsg_load_release_stages(env);
-    // TODO: Filter keys?
 
+    bsg_load_release_stages(env, report);
+    bsg_load_filters(env, report);
 }

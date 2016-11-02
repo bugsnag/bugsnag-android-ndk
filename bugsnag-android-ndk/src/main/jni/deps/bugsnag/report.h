@@ -114,50 +114,66 @@ typedef struct {
  */
 bugsnag_report *bugsnag_report_init(char *api_key);
 void bugsnag_report_free(bugsnag_report *report);
+
 /**
  * Create a new Bugsnag event. Each report can have many events.
  */
 bsg_event *bugsnag_event_init();
 void bugsnag_event_free(bsg_event *event);
+
 /**
  * Create a new Bugsnag exception. Each event can have many exceptions, where
  * the first exception is the caught exception and the rest are successive
  * causes.
  */
 bsg_exception *bugsnag_exception_init(char *name, char *message);
+
 /**
  * Create a new bugsnag thread. Each event can have many threads.
  */
 bsg_thread *bugsnag_thread_init(char *id, char *name);
+
 /**
  * Create a new Bugsnag breadcrumb. Each breadcrumb has a name and type, and
  * optionally attached metadata pairs
  */
 bsg_breadcrumb *bugsnag_breadcrumb_init(char *name, bsg_breadcrumb_t type);
+
 /**
  * Add an event to a report
  */
 void bugsnag_report_add_event(bugsnag_report *report, bsg_event *event);
+
 /**
  * Add an exception to an event
  */
 void bugsnag_event_add_exception(bsg_event *event, bsg_exception *exc);
+
 /**
  * Add a breadcrumb to an event
  */
 void bugsnag_event_add_breadcrumb(bsg_event *event, bsg_breadcrumb *crumb);
+
+/**
+ * Removes all the breadcrumbs from the event
+ */
+void bugsnag_event_clear_breadcrumbs(bsg_event *event);
+
 /**
  * Add a thread to an event
  */
 void bugsnag_event_add_thread(bsg_event *event, bsg_thread *thread);
+
 /**
  * Add a stack frame to an exception
  */
 void bugsnag_exception_add_frame(bsg_exception *exc, bsg_stackframe frame);
+
 /**
  * Add a stack frame to a thread
  */
 void bugsnag_thread_add_frame(bsg_thread *thread, bsg_stackframe frame);
+
 /**
  * Add a key/value pair of metadata to the breadcrumb
  */

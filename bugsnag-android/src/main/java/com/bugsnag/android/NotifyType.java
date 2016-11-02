@@ -10,8 +10,9 @@ public enum NotifyType {
     DEVICE(4),
     CONTEXT(5),
     RELEASE_STAGES(6),
-    BREADCRUMB(7),
-    META(8);
+    FILTERS(7),
+    BREADCRUMB(8),
+    META(9);
 
     private Integer intValue;
 

@@ -157,6 +157,7 @@ public class Configuration {
      */
     public void setFilters(String[] filters) {
         this.filters = filters;
+        notifyObservers(NotifyType.FILTERS);
     }
 
     /**

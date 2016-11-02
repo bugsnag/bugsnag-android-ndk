@@ -23,6 +23,7 @@ JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateAppD
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateDeviceDetails(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateContextDetails(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateReleaseStagesDetails(JNIEnv *env, jclass type);
+JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateFilterDetails(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateBreadcumbDetails(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL Java_com_bugsnag_android_ndk_BugsnagObserver_populateMetaDataDetails(JNIEnv *env, jclass type);
 

@@ -98,6 +98,7 @@ void bugsnag_event_add_breadcrumb(bsg_event *event, bsg_breadcrumb *crumb) {
   long length = sizeof(event->breadcrumbs)/sizeof(bsg_breadcrumb *);
   if (event->crumb_count == length) {
     bsg_breadcrumb *old_crumb = event->breadcrumbs[0];
+    json_value_free(old_crumb->metadata);
     free(old_crumb);
     for (int i = 0; i < length - 1; i++) {
       bsg_breadcrumb *crumb1 = event->breadcrumbs[i];
@@ -108,6 +109,16 @@ void bugsnag_event_add_breadcrumb(bsg_event *event, bsg_breadcrumb *crumb) {
   } else {
     event->breadcrumbs[event->crumb_count++] = crumb;
   }
+}
+
+void bugsnag_event_clear_breadcrumbs(bsg_event *event) {
+  for (int i = 0; i < event->crumb_count; i++) {
+    bsg_breadcrumb *crumb = event->breadcrumbs[i];
+    json_value_free(crumb->metadata);
+    free(crumb);
+  }
+
+  event->crumb_count = 0;
 }
 
 void bugsnag_thread_add_frame(bsg_thread *thread, bsg_stackframe frame) {

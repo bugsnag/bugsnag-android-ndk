@@ -46,6 +46,7 @@ public class MainActivity extends Activity {
 
         Bugsnag.init(this, config);
 
+        Bugsnag.setFilters("KeyString","intArrayKey","submapKey");
 
         Bugsnag.getMetaData().addToTab("tab1", "KeyString", "StringValue1");
         Bugsnag.getMetaData().addToTab("tab1", "KeyShort", new Short("12"));
@@ -114,9 +115,18 @@ public class MainActivity extends Activity {
 
 
         Map<String, String> values = new HashMap<>();
-        mapValue.put("KeyString1", "StringValue1");
-        mapValue.put("KeyString2", "StringValue2");
+        values.put("KeyString1", "StringValue1");
+        values.put("KeyString2", "StringValue2");
         Bugsnag.leaveBreadcrumb("Something happened here", BreadcrumbType.MANUAL, values);
+
+        Map<String, String> values2 = new HashMap<>();
+        values2.put("KeyString3", "StringValue3");
+        values2.put("KeyString4", "StringValue4");
+        Bugsnag.leaveBreadcrumb("Something else happened here", BreadcrumbType.MANUAL, values2);
+
+
+        Bugsnag.setNotifyReleaseStages("release", "dev");
+
 
 
         // Set the user information

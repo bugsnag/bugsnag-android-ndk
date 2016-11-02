@@ -1,5 +1,6 @@
 package com.bugsnag.android;
 
+import java.sql.BatchUpdateException;
 import java.util.Map;
 
 /**
@@ -113,5 +114,13 @@ class NativeInterface {
 
     public static Object[] getBreadcrumbs() {
         return Bugsnag.getClient().breadcrumbs.store.toArray();
+    }
+
+    public static String[] getFilters() {
+        return Bugsnag.getClient().config.getFilters();
+    }
+
+    public static String[] getReleaseStages() {
+        return Bugsnag.getClient().config.getNotifyReleaseStages();
     }
 }

@@ -150,6 +150,7 @@ int setupBugsnag(JNIEnv *env) {
     bugsnag_event_add_exception(event, exception);
 
     g_bugsnag_report = malloc(sizeof(struct bugsnag_ndk_report));
+    memset(g_bugsnag_report, 0, sizeof(struct bugsnag_ndk_report));
     g_bugsnag_report->error_store_path = error_store_path;
     g_bugsnag_report->report = report;
     g_bugsnag_report->event = event;
@@ -213,13 +214,18 @@ Java_com_bugsnag_android_ndk_BugsnagObserver_populateBreadcumbDetails(JNIEnv *en
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_BugsnagObserver_populateMetaDataDetails(JNIEnv *env, jclass type) {
-    bsg_populate_meta_data(env, g_bugsnag_report->event);
+    bsg_populate_meta_data(env, g_bugsnag_report->event, &g_bugsnag_report->filters);
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_BugsnagObserver_populateReleaseStagesDetails(JNIEnv *env,
                                                                           jclass type) {
-    bsg_load_release_stages(env);
+    bsg_load_release_stages(env, g_bugsnag_report);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_BugsnagObserver_populateFilterDetails(JNIEnv *env, jclass type) {
+    bsg_load_filters(env, g_bugsnag_report);
 }
 
 /**
@@ -236,6 +242,14 @@ void tearDownBugsnag() {
     free(g_sigaction);
     free(g_native_code);
     bugsnag_report_free(g_bugsnag_report->report);
+
+    if (g_bugsnag_report->filters.values) {
+        free(g_bugsnag_report->filters.values);
+    }
+    if (g_bugsnag_report->notify_release_stages.values) {
+        free(g_bugsnag_report->notify_release_stages.values);
+    }
+
     free(g_bugsnag_report);
 }
 
