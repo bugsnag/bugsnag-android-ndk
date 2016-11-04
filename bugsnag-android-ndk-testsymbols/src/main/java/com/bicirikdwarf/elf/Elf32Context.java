@@ -92,6 +92,7 @@ public class Elf32Context {
 
 			String name = readString(symbol.st_name);
 			if (!name.isEmpty()) {
+				symbol.symbol_name = name;
 				symbols.add(symbol);
 
 				if (debugging())

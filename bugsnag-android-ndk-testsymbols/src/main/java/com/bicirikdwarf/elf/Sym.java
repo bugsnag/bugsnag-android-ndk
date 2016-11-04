@@ -10,6 +10,10 @@ public class Sym {
 	public byte st_other;
 	public short st_shndx;
 
+	public String symbol_name;
+	public String filename;
+	public int line_number;
+
 	public void parse(ByteBuffer buffer) {
 		st_name = buffer.getInt();
 		st_value = buffer.getInt();
