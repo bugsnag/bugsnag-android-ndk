@@ -37,7 +37,7 @@ extern int setupBugsnag(JNIEnv *);
  */
 extern void tearDownBugsnag();
 
-
+extern void notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
 
 
 #ifdef __cplusplus

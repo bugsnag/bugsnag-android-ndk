@@ -123,4 +123,17 @@ class NativeInterface {
     public static String[] getReleaseStages() {
         return Bugsnag.getClient().config.getNotifyReleaseStages();
     }
+
+    public static void notify(final String name,
+                              final String message,
+                              final Severity severity,
+                              final StackTraceElement[] stacktrace) {
+
+        Bugsnag.getClient().notify(name, message, stacktrace, new Callback() {
+            @Override
+            public void beforeNotify(Report report) {
+                report.getError().setSeverity(severity);
+            }
+        });
+    }
 }

@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
     public native void causeCppAbort();
     public native void causeCppTrap();
     public native void causeCppIll();
+    public native void nativeNotify();
 
 
     @Override
@@ -134,6 +135,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 Bugsnag.getClient().notify(new RuntimeException("test notify"));
+                nativeNotify();
             }
         });
 

@@ -3,6 +3,7 @@
 #include <jni.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <dlfcn.h>
 
 static void __attribute__((used)) somefakefunc(void) {}
 
@@ -120,4 +121,27 @@ Java_com_bugsnag_android_ndk_test_MainActivity_causeTrap(JNIEnv *env, jobject in
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_test_MainActivity_causeIll(JNIEnv *env, jobject instance) {
     crash_priv_inst();
+}
+
+typedef enum {
+    /** An unhandled exception */
+            BSG_SEVERITY_ERR,
+    /** A handled exception */
+            BSG_SEVERITY_WARN,
+    /** Custom, notable error messages */
+            BSG_SEVERITY_INFO,
+} bsg_severity_t;
+
+void internal_notify(JNIEnv *env) {
+    // TODO: hack to allow call to manual notify without including the bugsnag code
+    // This should be replaced with a better way to include to code
+    void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
+    void (*notify) (JNIEnv *, char*, char*, bsg_severity_t) = dlsym(libbugsnag, "notify");
+
+    notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
+}
+
+JNIEXPORT void JNICALL
+Java_com_bugsnag_android_ndk_test_MainActivity_nativeNotify(JNIEnv *env, jobject instance) {
+    internal_notify(env);
 }

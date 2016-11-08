@@ -4,11 +4,10 @@
 
 #include <jni.h>
 
-#include "headers/libunwind.h"
 #include "bugsnag_ndk.h"
 #include "bugsnag_ndk_report.h"
 #include "bugsnag_unwind.h"
-#include "deps/bugsnag/report.h"
+
 
 /* Signals to be caught. */
 #define BSG_SIG_CATCH_COUNT 6
@@ -34,18 +33,103 @@ struct bugsnag_ndk_report *g_bugsnag_report;
 unwind_struct *g_native_code;
 
 /**
- * Checks to see if the given string starts with the given prefix
+ * Manually notify to Bugsnag
+ * uses the java notifier to send basic information
+ *
+ * TODO: also include any meta data, breadcrumbs or user data that has been set in C?
  */
-int startsWith(const char *pre, const char *str)
-{
-    size_t lenpre = strlen(pre);
-    size_t lenstr = strlen(str);
+void notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
+    BUGSNAG_LOG("In notify");
 
-    if (lenstr < lenpre) {
-        return 0; // false
-    } else {
-        return strncmp(pre, str, lenpre) == 0;
+    void* frames[BUGSNAG_FRAMES_MAX];
+    size_t frames_size = unwind_current_context(frames, BUGSNAG_FRAMES_MAX);
+
+    jclass trace_class = (*env)->FindClass(env, "java/lang/StackTraceElement");
+    jmethodID trace_constructor = (*env)->GetMethodID(env, trace_class, "<init>",
+                                                      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V");
+    jobjectArray trace = (*env)->NewObjectArray(env,
+                                                0,
+                                                (*env)->FindClass(env, "java/lang/StackTraceElement"),
+                                                NULL);
+
+    // Ignore the first 2 frames that are in this notify code
+    int frames_to_process = frames_size - 2;
+
+    if (frames_to_process > 0) {
+        // Create stack trace array
+        trace = (*env)->NewObjectArray(env,
+                                       frames_to_process,
+                                       (*env)->FindClass(env, "java/lang/StackTraceElement"),
+                                       NULL);
+
+        // populate stack frame element array
+        int i;
+        for (i = 0; i < frames_to_process; i++) {
+
+            void *frame = frames[i + (frames_size - frames_to_process)];
+
+            Dl_info info;
+            if (dladdr(frame, &info) != 0) {
+
+                jstring class = (*env)->NewStringUTF(env, "");
+
+                jstring filename;
+                if (info.dli_fname != NULL) {
+                    filename = (*env)->NewStringUTF(env, info.dli_fname);
+                } else {
+                    filename = (*env)->NewStringUTF(env, "");
+                }
+
+                // use the method from unwind if there is one
+                jstring methodName;
+                if (info.dli_sname != NULL) {
+                    methodName = (*env)->NewStringUTF(env, info.dli_sname);
+                } else {
+                    methodName = (*env)->NewStringUTF(env, "(null)");
+                }
+
+                uintptr_t file_offset = (uintptr_t) frame - (uintptr_t) info.dli_fbase;
+                jint lineNumber = (int) file_offset;
+
+
+                // Build up a stack frame
+                jobject jframe = (*env)->NewObject(env,
+                                                   trace_class,
+                                                   trace_constructor,
+                                                   class,
+                                                   methodName,
+                                                   filename,
+                                                   lineNumber);
+
+                (*env)->SetObjectArrayElement(env, trace, i, jframe);
+            }
+        }
     }
+
+    // Create a severity Error
+    jclass severity_class = (*env)->FindClass(env, "com/bugsnag/android/Severity");
+    jfieldID error_field;
+    if (severity == BSG_SEVERITY_ERR) {
+        error_field = (*env)->GetStaticFieldID(env, severity_class , "ERROR", "Lcom/bugsnag/android/Severity;");
+    } else if (severity == BSG_SEVERITY_WARN) {
+        error_field = (*env)->GetStaticFieldID(env, severity_class , "WARNING", "Lcom/bugsnag/android/Severity;");
+    } else {
+        error_field = (*env)->GetStaticFieldID(env, severity_class , "INFO", "Lcom/bugsnag/android/Severity;");
+    }
+    jobject jseverity = (*env)->GetStaticObjectField(env, severity_class, error_field);
+
+    jstring jname = (*env)->NewStringUTF(env, name);
+    jstring jmessage = (*env)->NewStringUTF(env, message);
+
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID notify_method = (*env)->GetStaticMethodID(env, interface_class, "notify", "(Ljava/lang/String;Ljava/lang/String;Lcom/bugsnag/android/Severity;[Ljava/lang/StackTraceElement;)V");
+    (*env)->CallStaticVoidMethod(env, interface_class, notify_method, jname, jmessage, jseverity, trace);
+
+    (*env)->DeleteLocalRef(env, trace_class);
+    (*env)->DeleteLocalRef(env, trace);
+    (*env)->DeleteLocalRef(env, severity_class);
+    (*env)->DeleteLocalRef(env, jseverity);
+    (*env)->DeleteLocalRef(env, interface_class);
 }
 
 /**
@@ -86,17 +170,13 @@ static void bugsnag_signal_handler(int code, struct siginfo *si, void *sc) {
                 strsignal(si->si_signo));
         sprintf(exception->name, "%s", strsignal(si->si_signo));
 
-        // Ignore the first 2 frames (handler code)
-        int project_frames = frames_size - BUGSNAG_FRAMES_TO_IGNORE;
-
-        if (project_frames > 0) {
+        if (frames_size > 0) {
 
             // populate stack frame element array
             int i;
-            for (i = 0; i < project_frames; i++) {
+            for (i = 0; i < frames_size; i++) {
 
-                unwind_struct_frame *unwind_frame = &g_native_code->frames[i +
-                                                                           BUGSNAG_FRAMES_TO_IGNORE];
+                unwind_struct_frame *unwind_frame = &g_native_code->frames[i];
 
                 Dl_info info;
                 if (dladdr(unwind_frame->frame_pointer, &info) != 0) {

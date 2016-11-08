@@ -74,6 +74,43 @@ int starts_with(const char *pre, const char *str)
     }
 }
 
+
+/**
+ * structure used when using <unwind.h> to get the trace for the current context
+ */
+struct BacktraceState
+{
+    void** current;
+    void** end;
+};
+
+/**
+ * callback used when using <unwind.h> to get the trace for the current context
+ */
+static _Unwind_Reason_Code unwind_callback(struct _Unwind_Context* context, void* arg)
+{
+    struct BacktraceState* state = (struct BacktraceState*)arg;
+    uintptr_t pc = _Unwind_GetIP(context);
+    if (pc) {
+        if (state->current == state->end) {
+            return _URC_END_OF_STACK;
+        } else {
+            *state->current++ = (void*)pc;
+        }
+    }
+    return _URC_NO_REASON;
+}
+
+/**
+ * uses built in <unwind.h> to get the trace for the current context
+ */
+size_t unwind_current_context(void** buffer, size_t max) {
+    struct BacktraceState state = {buffer, buffer + max};
+    _Unwind_Backtrace(unwind_callback, &state);
+
+    return state.current - buffer;
+}
+
 /**
  * Checks if the given string is considered a "system" method or not
  * NOTE: some methods seem to get added to binaries automatically to catch arithmetic errors
@@ -203,7 +240,7 @@ int unwind_frame(unwind_struct* unwind, int max_depth, void* sc) {
  * Uses libcorkscrew to unwind the stacktrace
  * This should work on android greater than 5
  */
-int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
+int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, void* sc) {
     int (*getcontext) (ucontext_t*);// = dlsym(libunwind, "_Ux86_getcontext");
     int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
     int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
@@ -378,7 +415,7 @@ int bugsnag_unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* s
 
     void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
     if (libunwind != NULL) {
-        size = unwind_libunwind(libunwind, unwind, max_depth, si, sc);
+        size = unwind_libunwind(libunwind, unwind, max_depth, sc);
 
         dlclose(libunwind);
     } else {

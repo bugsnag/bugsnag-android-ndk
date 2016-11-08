@@ -20,6 +20,7 @@
 -keep class com.bugsnag.android.Breadcrumbs { *; }
 -keep class com.bugsnag.android.Breadcrumbs$Breadcrumb { *; }
 -keep class com.bugsnag.android.BreadcrumbType { *; }
+-keep class com.bugsnag.android.Severity { *; }
 -keep class com.bugsnag.android.ndk.BugsnagObserver { *; }
 -keep class com.bugsnag.android.ndk.test.MainActivity {
     public native void causeFpe();
@@ -34,5 +35,6 @@
     public native void causeCppAbort();
     public native void causeCppTrap();
     public native void causeCppIll();
+    public native void nativeNotify();
 }
 

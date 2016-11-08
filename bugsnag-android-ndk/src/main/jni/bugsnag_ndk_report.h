@@ -7,9 +7,6 @@
 
 #include "deps/bugsnag/bugsnag.h"
 
-/* Number of frames to ignore (part of handler code) */
-#define BUGSNAG_FRAMES_TO_IGNORE 0
-
 struct bugsnag_ndk_string_array {
     const char **values;
     int size;

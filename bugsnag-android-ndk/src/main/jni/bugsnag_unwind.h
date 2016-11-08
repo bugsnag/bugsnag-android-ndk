@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <time.h>
+#include <unwind.h>
 
 #include "headers/libunwind.h"
 
@@ -51,5 +52,7 @@ extern int bugsnag_unwind_stack(unwind_struct* unwind, int max_depth, struct sig
 extern int is_system_method(const char *method);
 
 extern int is_system_file(const char *file);
+
+extern size_t unwind_current_context(void** buffer, size_t max);
 
 #endif //NDKTEST_UNWIND_H
