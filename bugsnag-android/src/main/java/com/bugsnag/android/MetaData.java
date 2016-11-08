@@ -5,9 +5,11 @@ import android.support.annotation.NonNull;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +65,7 @@ public class MetaData implements JsonStream.Streamable {
         } else {
             tab.remove(key);
         }
+
         Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
     }
 
@@ -89,19 +92,26 @@ public class MetaData implements JsonStream.Streamable {
 
     void setFilters(String... filters) {
         this.filters = filters;
-
-        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
+        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.FILTERS);
     }
 
     static MetaData merge(MetaData... metaDataList) {
         ArrayList<Map<String, Object>> stores = new ArrayList<Map<String, Object>>();
+        List<String> filters = new ArrayList<>();
         for(MetaData metaData : metaDataList) {
             if(metaData != null) {
                 stores.add(metaData.store);
+
+                if (metaData.filters != null) {
+                    filters.addAll(Arrays.asList(metaData.filters));
+                }
             }
         }
 
-        return new MetaData(mergeMaps(stores.toArray(new Map[0])));
+        MetaData newMeta = new MetaData(mergeMaps(stores.toArray(new Map[0])));
+        newMeta.filters = filters.toArray(new String[filters.size()]);
+
+        return newMeta;
     }
 
     private static Map<String, Object> mergeMaps(Map<String, Object>... maps) {
