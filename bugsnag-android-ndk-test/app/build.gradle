@@ -1,49 +1,18 @@
-apply plugin: 'com.android.model.application'
-model {
-    android {
-        compileSdkVersion 25
-        buildToolsVersion "25.0.0"
-        defaultConfig {
-            applicationId "com.bugsnag.android.ndk.test"
-            minSdkVersion.apiLevel 9
-            targetSdkVersion.apiLevel 25
-            versionCode 1
-            versionName "1.0"
-            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-        }
-        buildTypes {
-            debug {
-                //applicationIdSuffix ".debug"
-                //minifyEnabled true
-                //proguardFiles.add(file('proguard-rules.pro'))
-            }
-
-            release {
-                minifyEnabled true
-                proguardFiles.add(file('proguard-rules.pro'))
-
-                signingConfig = $("android.signingConfigs.myConfig")
-            }
-        }
-        ndk {
-            moduleName "jni-entry-point"
-            ldLibs.addAll(['log'])
-            platformVersion = 9 // Note this must be >=21 for 64 bit architectures
-            abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "mips", "arm64-v8a", "x86_64", "mips64"])
-            CFlags.add("-fvisibility=hidden")
-//            ldFlags.add("")
-//            toolchain = "clang"
-//            toolchainVersion = "3.9"
-//            CFlags.add("")
-//            cppFlags.add("")
-//            debuggable = false
-//            renderscriptNdkMode = false
-//            stl = "system"
-        }
+apply plugin: 'com.android.application'
+android {
+    compileSdkVersion 25
+    buildToolsVersion "25.0.0"
+    defaultConfig {
+        applicationId "com.bugsnag.android.ndk.test"
+        minSdkVersion 9
+        targetSdkVersion 25
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
-    android.signingConfigs {
-        create("myConfig") {
+    signingConfigs {
+        myConfig {
             storeFile file("../../bugsnag-ndk-test.jks")
             storePassword "bugsnagtest"
             keyAlias "bugsnag"
@@ -51,7 +20,33 @@ model {
             storeType "jks"
         }
     }
+
+    buildTypes {
+        debug {
+            //applicationIdSuffix ".debug"
+            //minifyEnabled true
+            //proguardFiles.add(file('proguard-rules.pro'))
+        }
+
+        release {
+            minifyEnabled true
+            proguardFiles.add(file('proguard-rules.pro'))
+            proguardFiles.add(getDefaultProguardFile('proguard-android.txt'))
+
+            signingConfig signingConfigs.myConfig
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+        }
+    }
 }
+
+
+
+apply plugin: 'com.bugsnag.android.gradle'
 
 
 dependencies {
