@@ -6,6 +6,8 @@ import com.bicirikdwarf.elf.Elf32Context;
 import com.bicirikdwarf.elf.Sym;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -15,12 +17,57 @@ import java.util.Comparator;
 import java.util.List;
 
 class Main {
-    public static void main(String args[]) throws IOException {
-        File f = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/armeabi/libjni-entry-point.so");
+
+    private static class SharedObjectFilter implements FilenameFilter {
+
+        @Override
+        public boolean accept(File dir, String name) {
+            return name.endsWith(".so");
+        }
+    }
+
+
+
+    public static void main(String args[]) {
+
+        File directory = new File("../bugsnag-android-ndk-test/app/build/intermediates/cmake/release/obj/");
+        //File directory = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/");
+        //File f = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/armeabi/libjni-entry-point.so");
         //File f = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/armeabi-v7a/libjni-entry-point.so");
         //File f = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/mips/libjni-entry-point.so");
         //File f = new File("../bugsnag-android-ndk-test/app/build/intermediates/binaries/release/obj/x86/libjni-entry-point.so");
 
+
+        for (File archDir : directory.listFiles()) {
+            if (archDir.isDirectory()) {
+                String arch = archDir.getName();
+
+                for (File sharedObject : archDir.listFiles(new SharedObjectFilter())) {
+
+                    System.out.println("");
+                    System.out.println(" ------------------------ Symbols in " + sharedObject.getAbsoluteFile());
+                    try {
+                        List<Sym> symbols = getSymbols(sharedObject);
+                        System.out.println("arch = " + arch + "  count = " + symbols.size());
+
+//                        for (Sym symbol : symbols) {
+//                            if (symbol.symbol_name != null) {
+//                                System.out.println(symbol.st_value //+ "/0x" + Long.toHexString(symbol.st_value)
+//                                        + " " + symbol.symbol_name
+//                                        + " " + symbol.filename
+//                                        + " " + symbol.line_number);
+//                            }
+//                        }
+
+                    } catch (Exception e) {
+                        System.out.println("arch = " + arch + "  failed to generate symbols = " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    private static List<Sym> getSymbols(File f) throws IOException {
         RandomAccessFile aFile = new RandomAccessFile(f, "r");
         FileChannel inChannel = aFile.getChannel();
         long fileSize = inChannel.size();
@@ -66,15 +113,11 @@ class Main {
                     }
                 }
             }
-
-            if (symbol.symbol_name != null) {
-                System.out.println(symbol.st_value + "/0x" + Long.toHexString(symbol.st_value)
-                        + " - " + symbol.symbol_name
-                        + " - " + symbol.filename
-                        + " - " + symbol.line_number);
-            }
         }
 
+        System.out.println("build note = " + elf.getBuildNote());
 
+        return elf.getSymbols();
     }
+
 }

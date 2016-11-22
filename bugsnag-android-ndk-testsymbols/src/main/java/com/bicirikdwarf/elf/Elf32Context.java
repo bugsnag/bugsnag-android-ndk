@@ -33,6 +33,7 @@ public class Elf32Context {
 	List<Sym> symbols;
 	List<Shdr> shdrs;
 	Map<String, Shdr> shdrsByName;
+	String buildNote;
 
 	private ByteBuffer shstrtab_buffer; // string-table section header
 	private ByteBuffer strtab_buffer;
@@ -75,6 +76,7 @@ public class Elf32Context {
 
 		strtab_buffer = getSectionBufferByName(".strtab");
 		initSymbols();
+		initBuildNote();
 	}
 
 	private void initSymbols() {
@@ -101,6 +103,52 @@ public class Elf32Context {
 			}
 
 		}
+	}
+
+	private void initBuildNote() {
+		Shdr buildNoteTab = getSectionByName(".note.gnu.build-id");
+		if (buildNoteTab == null)
+			return;
+
+		ByteBuffer buildNoteBuffer = getSectionBuffer(buildNoteTab);
+
+		// spec see p35 http://www.skyfree.org/linux/references/ELF_Format.pdf
+		int namesz = buildNoteBuffer.getInt();
+		int descsz = buildNoteBuffer.getInt();
+		int type  = buildNoteBuffer.getInt();
+
+		if (type == 3) {
+			String name = "";
+
+			for (int i = 0; i < namesz; i++) {
+				char c = (char)buildNoteBuffer.get();
+
+				if (c != '\0') {
+					name += c;
+				}
+			}
+
+			// the name will be padded out to 4 byte alignment
+			if (namesz % 4 != 0) {
+				for (int i = 0; i < namesz % 4; i++) {
+					buildNoteBuffer.get();
+				}
+			}
+
+			// Get the build ID
+			String desc = "";
+			for (int i = 0; i < descsz; i++) {
+				byte b = (byte)buildNoteBuffer.get();
+
+				desc += Integer.toHexString(Byte.toUnsignedInt(b));
+			}
+
+			buildNote = desc;
+		}
+	}
+
+	public String getBuildNote() {
+		return buildNote;
 	}
 
 	public Ehdr getElfHeader() {
