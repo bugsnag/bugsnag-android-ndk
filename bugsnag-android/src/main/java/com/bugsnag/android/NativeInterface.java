@@ -108,6 +108,11 @@ class NativeInterface {
         return android.os.Build.VERSION.SDK_INT;
     }
 
+    public static String[] getDeviceCpuAbi() {
+        return Bugsnag.getClient().deviceData.cpuAbi;
+    }
+
+
     public static Map<String, Object> getMetaData() {
         return Bugsnag.getClient().getMetaData().store;
     }

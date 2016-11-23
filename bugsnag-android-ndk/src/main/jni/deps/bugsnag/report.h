@@ -241,6 +241,11 @@ void bugsnag_event_delete_metadata_section(bsg_event *event, char *section);
 JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event);
 
 /**
+ * Gets the base object for a meta data section
+ */
+JSON_Object* bugsnag_event_get_section_base(bsg_event *event, bsg_event_section section);
+
+/**
  * Clears all meta data from an event
  */
 void bugsnag_event_clear_metadata_base(bsg_event *event);

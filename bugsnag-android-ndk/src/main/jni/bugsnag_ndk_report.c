@@ -623,6 +623,31 @@ void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
     (*env)->DeleteLocalRef(env, interface_class);
 }
 
+
+/**
+ * Gets the device CPU ABI details from the client class and pre-populates the bugsnag error
+ */
+void bsg_populate_device_cpu_abi(JNIEnv *env, bsg_event *event, jclass interface_class) {
+    jmethodID method = (*env)->GetStaticMethodID(env, interface_class, "getDeviceCpuAbi", "()[Ljava/lang/String;");
+    jobjectArray value = (*env)->CallStaticObjectMethod(env, interface_class, method);
+
+    JSON_Object* device_base = bugsnag_event_get_section_base(event, BSG_DEVICE);
+    JSON_Array* abi_array = bugsnag_object_add_array(device_base, "cpuAbi");
+    int size = (*env)->GetArrayLength(env, value);
+
+    int i;
+    for (i = 0; i < size; i++) {
+        // Get the abi value as a char *
+        jstring element_value = (*env)->GetObjectArrayElement(env, value, i);
+        char* abi = (char*)(*env)->GetStringUTFChars(env, element_value, JNI_FALSE);
+
+        // Add it to the JSON array
+        bugsnag_array_set_string(abi_array, abi);
+        (*env)->DeleteLocalRef(env, element_value);
+    }
+    (*env)->DeleteLocalRef(env, value);
+}
+
 /**
  * Gets the device data details from the client class and pre-populates the bugsnag error
  */
@@ -646,6 +671,8 @@ void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
     bugsnag_event_set_string(event, BSG_DEVICE, "brand", get_method_string(env, interface_class, "getDeviceBrand"));
     bugsnag_event_set_string(event, BSG_DEVICE, "model", get_method_string(env, interface_class, "getDeviceModel"));
     bugsnag_event_set_number(event, BSG_DEVICE, "apiLevel", get_method_int(env, interface_class, "getDeviceApiLevel"));
+
+    bsg_populate_device_cpu_abi(env, event, interface_class);
 
     (*env)->DeleteLocalRef(env, interface_class);
 }

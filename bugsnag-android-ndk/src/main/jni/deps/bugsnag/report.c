@@ -224,6 +224,10 @@ JSON_Object* bugsnag_event_get_metadata_base(bsg_event *event) {
   return json_value_get_object(event->custom_diagnostics);
 }
 
+JSON_Object* bugsnag_event_get_section_base(bsg_event *event, bsg_event_section section) {
+  return _event_section(event->diagnostics, _event_section_name(section));
+}
+
 void bugsnag_event_clear_metadata_base(bsg_event *event) {
   json_object_clear(json_value_get_object(event->custom_diagnostics));
 }
