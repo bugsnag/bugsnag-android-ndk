@@ -14,10 +14,13 @@ package dwarf2;
 
 // import gnu.classpath.Configuration;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,6 +51,8 @@ public class Dwarf2NameFinder {
      */
     private final RangeMap cache;
 
+    private List<FileLocation> fileLocationMap;
+
     private static final int DW_LNS_extended_op = 0;
     private static final int DW_LNS_copy = 1;
     private static final int DW_LNS_advance_pc = 2;
@@ -70,7 +75,7 @@ public class Dwarf2NameFinder {
 
     private static final class debug extends Level {
         private debug() {
-            super("DWARF-2", Level.INFO.intValue());
+            super("DWARF-2", INFO.intValue());
         }
     }
 
@@ -126,6 +131,8 @@ public class Dwarf2NameFinder {
 
     public Dwarf2NameFinder(final String binaryFile) {
         cache = new RangeMap();
+        fileLocationMap = new ArrayList<>();
+
         try {
             dw2 = SectionFinder.mapSection(binaryFile, DEBUG_LINE);
             this.binaryFile = binaryFile;
@@ -157,6 +164,11 @@ public class Dwarf2NameFinder {
 
     private void scan() {
         lookup(-1, true);
+
+        for (FileLocation loc : fileLocationMap) {
+            System.out.println(loc.address + " - " + loc.filename + " : " + loc.lineNumber);
+        }
+
     }
 
     private void lookup(final long target, boolean scan_only) {
@@ -209,27 +221,23 @@ public class Dwarf2NameFinder {
             dw2.limit(prologue_end);
             ByteBuffer prologue = dw2.slice();
 
-            // Skip the directories; they end with a single null byte.
-            String s;
-            while ((s = getString(prologue)).length() > 0) {
-                if (Configuration.DEBUG)
-                    logger.log(DEBUG, "Skipped directory: {0}", s);
+            // get the directories; they end with a single null byte.
+            String dname;
+            LinkedList dnames = new LinkedList();
+            while ((dname = getString(prologue)).length() > 0) {
+                dnames.add(dname);
             }
 
             // Read the file names.
             LinkedList fnames = new LinkedList();
             while (prologue.hasRemaining()) {
                 String fname = getString(prologue);
-                if (Configuration.DEBUG)
-                    logger.log(DEBUG, "File name: {0}", fname);
-                fnames.add(fname);
 
-                long u1 = getUleb128(prologue);
-                long u2 = getUleb128(prologue);
-                long u3 = getUleb128(prologue);
-                if (Configuration.DEBUG)
-                    logger.log(DEBUG, "dir: {0}, time: {1}, len: {2}", new Object[]
-                            {new Long(u1), new Long(u2), new Long(u3)});
+                long dir = getUleb128(prologue);
+                long time = getUleb128(prologue);
+                long size = getUleb128(prologue);
+
+                fnames.add(dnames.get((int)dir - 1) + File.separator + fname);
             }
             prologue = null;
 
@@ -370,6 +378,9 @@ public class Dwarf2NameFinder {
                             if (ucomp(max_address, address) < 0)
                                 max_address = address;
                         }
+
+                        fileLocationMap.add(new FileLocation(address, (String)fnames.get(fileno), lineno));
+
                         if (Configuration.DEBUG)
                             logger.log(DEBUG, "Advance PC by {0} to 0x{1}",
                                     new Object[]{new Long(amt),
@@ -381,6 +392,7 @@ public class Dwarf2NameFinder {
                         long amt = getSleb128(section);
                         prev_lineno = lineno;
                         lineno += (int) amt;
+
                         if (Configuration.DEBUG)
                             logger.log(DEBUG, "Advance line by {0} to {1}", new Object[]
                                     {new Long(amt), new Integer(lineno)});
@@ -418,6 +430,9 @@ public class Dwarf2NameFinder {
                             if (ucomp(max_address, address) < 0)
                                 max_address = address;
                         }
+
+                        fileLocationMap.add(new FileLocation(address, (String)fnames.get(fileno), lineno));
+
                         if (Configuration.DEBUG)
                             logger.log(DEBUG, "Advance PC by (constant) {0} to 0x{1}",
                                     new Object[]{new Integer(const_pc_add),
@@ -427,6 +442,9 @@ public class Dwarf2NameFinder {
                     case DW_LNS_fixed_advance_pc: {
                         int amt = section.getShort() & 0xFFFF;
                         address += amt;
+
+                        fileLocationMap.add(new FileLocation(address, (String)fnames.get(fileno), lineno));
+
                         if (Configuration.DEBUG)
                             logger.log(DEBUG, "Advance PC by (fixed) {0} to 0x{1}",
                                     new Object[]{new Integer(amt),
@@ -485,6 +503,9 @@ public class Dwarf2NameFinder {
                 prev_fileno = fileno;
                 lineno = new_line;
                 address = new_addr;
+
+                fileLocationMap.add(new FileLocation(address, (String)fnames.get(fileno), lineno));
+
                 if (scan_only) {
                     if (ucomp(min_address, address) > 0)
                         min_address = address;
