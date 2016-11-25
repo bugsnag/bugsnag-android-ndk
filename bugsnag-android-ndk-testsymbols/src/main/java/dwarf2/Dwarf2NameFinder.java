@@ -379,8 +379,6 @@ public class Dwarf2NameFinder {
                                 max_address = address;
                         }
 
-                        fileLocationMap.add(new FileLocation(address, (String)fnames.get(fileno), lineno));
-
                         if (Configuration.DEBUG)
                             logger.log(DEBUG, "Advance PC by {0} to 0x{1}",
                                     new Object[]{new Long(amt),
@@ -474,7 +472,7 @@ public class Dwarf2NameFinder {
                 }
             } else {
                 int adj = (opcode & 0xFF) - header.opcode_base;
-                int addr_adv = adj / header.line_range;
+                int addr_adv = (adj / header.line_range) * header.minimum_instruction_length;
                 int line_adv = header.line_base + (adj % header.line_range);
                 long new_addr = address + addr_adv;
                 int new_line = lineno + line_adv;

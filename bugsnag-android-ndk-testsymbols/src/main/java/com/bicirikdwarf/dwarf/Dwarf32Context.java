@@ -1,18 +1,20 @@
 package com.bicirikdwarf.dwarf;
 
-import static com.bicirikdwarf.utils.ElfUtils.debugging;
-import static com.bicirikdwarf.utils.ElfUtils.log;
+import com.bicirikdwarf.elf.Elf32Context;
+import com.bicirikdwarf.utils.ElfUtils;
+import com.bicirikdwarf.utils.Leb128;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import com.bicirikdwarf.elf.Elf32Context;
-import com.bicirikdwarf.utils.ElfUtils;
-import com.bicirikdwarf.utils.Leb128;
+import static com.bicirikdwarf.utils.ElfUtils.debugging;
+import static com.bicirikdwarf.utils.ElfUtils.log;
 
 public class Dwarf32Context {
 	Elf32Context elf;
@@ -20,7 +22,8 @@ public class Dwarf32Context {
 	Map<Integer, Abbrev> abbrevs;
 	Map<Integer, Map<Integer, Abbrev>> abbrevSequences;
 	private Map<Integer, CompilationUnit> compilationUnits;
-	
+    List<DebugLineEntry> debugLineEntries;
+
 	Map<Integer, DebugInfoEntry> dies;
 
 	ByteBuffer debug_str_buffer;
@@ -31,6 +34,7 @@ public class Dwarf32Context {
 		abbrevs = new HashMap<>();
 		abbrevSequences = new HashMap<>();
 		compilationUnits = new HashMap<>();
+        debugLineEntries = new ArrayList<>();
 		dies = new HashMap<>();
 
 		init();
@@ -41,6 +45,7 @@ public class Dwarf32Context {
 
 		initDebugAbbrev();
 		initDebugInfo();
+        initDebugLine();
 	}
 
 	private void initDebugAbbrev() throws IOException {
@@ -83,6 +88,11 @@ public class Dwarf32Context {
 			abbrevSequences.put(sequenceOffset, abbrevSequence);
 	}
 
+	private void initDebugLine() throws IOException {
+		ByteBuffer buffer = elf.getSectionBufferByName(".debug_line");
+        debugLineEntries = DebugLineParser.parse(buffer);
+	}
+
 	private void initDebugInfo() throws IOException {
 		ByteBuffer buffer = elf.getSectionBufferByName(".debug_info");
 
@@ -118,9 +128,13 @@ public class Dwarf32Context {
 	public Collection<CompilationUnit> getCompilationUnits() {
 		return compilationUnits.values();
 	}
-	
-	public Object getAttributeValue(DwFormType form, CompilationUnit cu,
-			ByteBuffer buffer) {
+
+    public List<DebugLineEntry> getDebugLineEntries() {
+        return debugLineEntries;
+    }
+
+    public Object getAttributeValue(DwFormType form, CompilationUnit cu,
+                                    ByteBuffer buffer) {
 		switch (form) {
 		case DW_FORM_string:
 			return ElfUtils.getNTString(buffer);
