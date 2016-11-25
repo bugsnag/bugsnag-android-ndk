@@ -66,8 +66,6 @@ class Main {
                         e.printStackTrace();
                     }
                 }
-
-                return;
             }
         }
     }
@@ -86,25 +84,9 @@ class Main {
         Elf32Context elf = new Elf32Context(buffer);
         Dwarf32Context dwarf = new Dwarf32Context(elf);
 
+        cleanElfSymbols(elf);
 
         Map<Long, BugsnagSoSymbol> symbols = new HashMap<>();
-
-        // Remove all ARM ELF special symbols from the list
-        // $a - At the start of a region of code containing ARM instructions.
-        // $t - At the start of a region of code containing THUMB instructions.
-        // $d - At the start of a region of data.
-        int index = 0;
-        while (index < elf.getSymbols().size()) {
-            ElfSymbol current = elf.getSymbols().get(index);
-
-            if (current.symbol_name.equals("$a")
-                    || current.symbol_name.equals("$t")
-                    || current.symbol_name.equals("$d")) {
-                elf.getSymbols().remove(index);
-            } else {
-                index++;
-            }
-        }
 
         // Create shared object symbols for all the elf symbols
         for (ElfSymbol symbol : elf.getSymbols()) {
@@ -134,30 +116,6 @@ class Main {
             } else {
                 findMethodName(elf.getSymbols(), dwarf.getCompilationUnits(), so);
                 symbols.put(so.getAddress(), so);
-            }
-        }
-
-        // Tweak symbols that have not quite been populated fully
-        for (BugsnagSoSymbol symbol : symbols.values()) {
-
-            // Check the following address for anything with a missing method name
-            if (symbol.getMethodName() == null
-                    && symbol.getFilename() != null
-                    && symbol.getLineNumber() != 0) {
-                if (symbols.containsKey(symbol.getAddress() + 1)
-                        && symbols.get(symbol.getAddress() + 1).getMethodName() != null) {
-                    symbol.setMethodName(symbols.get(symbol.getAddress() + 1).getMethodName());
-                }
-            }
-
-            // Check the previous address for anything with a missing line number
-            if (symbol.getLineNumber() == 0
-                    && symbol.getFilename() != null
-                    && symbol.getMethodName() != null) {
-                if (symbols.containsKey(symbol.getAddress() - 1)
-                        && symbols.get(symbol.getAddress() - 1).getLineNumber() != 0) {
-                    symbol.setLineNumber(symbols.get(symbol.getAddress() - 1).getLineNumber());
-                }
             }
         }
 
@@ -191,6 +149,42 @@ class Main {
         return output;
     }
 
+    private static void cleanElfSymbols(Elf32Context elf) {
+
+        // Sort the elf Entries by Address
+        elf.getSymbols().sort(new Comparator<ElfSymbol>() {
+            public int compare(ElfSymbol obj1, ElfSymbol obj2) {
+                return Long.compare(obj1.st_value, obj2.st_value);
+            }
+        });
+
+        // Remove all ARM ELF special symbols from the list
+        // $a - At the start of a region of code containing ARM instructions.
+        // $t - At the start of a region of code containing THUMB instructions.
+        // $d - At the start of a region of data.
+        int index = 0;
+        while (index < elf.getSymbols().size()) {
+            ElfSymbol current = elf.getSymbols().get(index);
+
+            if (current.symbol_name.equals("$a")
+                    || current.symbol_name.equals("$t")
+                    || current.symbol_name.equals("$d")) {
+
+                // HACK: It seems that these special symbols make the function offsets out of line with the debug info
+                // Check to see if there is another symbol in the next byte, and set the address to this symbols
+                // address to bring it in line with the other symbols for matching later
+                if (elf.getSymbols().size() > index + 1
+                        && elf.getSymbols().get(index + 1).st_value == current.st_value + 1) {
+                    elf.getSymbols().get(index + 1).st_value = current.st_value;
+                }
+
+                elf.getSymbols().remove(index);
+            } else {
+                index++;
+            }
+        }
+    }
+
     private static void findMethodName(List<ElfSymbol> elfSymbols, Collection<CompilationUnit> compileUnits, BugsnagSoSymbol so) {
         for (ElfSymbol symbol : elfSymbols) {
 
@@ -201,18 +195,6 @@ class Main {
                 return;
             }
         }
-
-        for (CompilationUnit unit : compileUnits) {
-            for (DebugInfoEntry die : unit.getCompileUnit().getChildren()) {
-                if (die.getAttribValue(DwAtType.DW_AT_low_pc) != null
-                        && (so.getAddress() == (int) die.getAttribValue(DwAtType.DW_AT_low_pc))) {
-                    if (die.getAttribValue(DwAtType.DW_AT_name) != null) {
-                        so.setMethodName((String)die.getAttribValue(DwAtType.DW_AT_name));
-                        return;
-                    }
-                }
-            }
-        }
     }
 
     private static void findCompileUnitInformation(Collection<CompilationUnit> compileUnits, BugsnagSoSymbol so) {
@@ -220,8 +202,7 @@ class Main {
         for (CompilationUnit unit : compileUnits) {
             for (DebugInfoEntry die : unit.getCompileUnit().getChildren()) {
                 if (die.getAttribValue(DwAtType.DW_AT_low_pc) != null
-                        && (so.getAddress() == (int)die.getAttribValue(DwAtType.DW_AT_low_pc)
-                        || so.getAddress() - 1 == (int)die.getAttribValue(DwAtType.DW_AT_low_pc))) { // HACK: arm files seem to have 1 byte difference?
+                        && so.getAddress() == (int)die.getAttribValue(DwAtType.DW_AT_low_pc)) {
 
                     if (unit.getCompileUnit().getAttribValue(DwAtType.DW_AT_name) != null) {
                         so.setFilename((String)unit.getCompileUnit().getAttribValue(DwAtType.DW_AT_name));
@@ -236,5 +217,4 @@ class Main {
             }
         }
     }
-
 }
