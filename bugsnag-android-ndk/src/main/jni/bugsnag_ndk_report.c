@@ -613,6 +613,7 @@ void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     bugsnag_event_set_string(event, BSG_APP, "releaseStage", get_method_string(env, interface_class, "getReleaseStage"));
+    bugsnag_event_set_string(event, BSG_APP, "id", get_method_string(env, interface_class, "getPackageName"));
     bugsnag_event_set_string(event, BSG_APP, "packageName", get_method_string(env, interface_class, "getPackageName"));
     bugsnag_event_set_string(event, BSG_APP, "name", get_method_string(env, interface_class, "getAppName"));
     bugsnag_event_set_string(event, BSG_APP, "version", get_method_string(env, interface_class, "getAppVersion"));

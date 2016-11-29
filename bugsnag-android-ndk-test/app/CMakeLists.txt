@@ -17,5 +17,5 @@ add_library( # Specifies the name of the library.
              SHARED
 
              # Provides a relative path to your source file(s).
-             src/main/jni/jni-entry-point.c
+             "src/main/jni/jni entry point.c"
              src/main/jni/jni-entry-point.cpp)
