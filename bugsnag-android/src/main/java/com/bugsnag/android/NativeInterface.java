@@ -138,6 +138,7 @@ class NativeInterface {
             @Override
             public void beforeNotify(Report report) {
                 report.getError().setSeverity(severity);
+                report.getError().config.defaultExceptionType = "c";
             }
         });
     }

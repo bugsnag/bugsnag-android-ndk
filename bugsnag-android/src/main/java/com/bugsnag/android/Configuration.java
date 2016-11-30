@@ -27,6 +27,7 @@ public class Configuration {
     private boolean sendThreads = true;
     private boolean enableExceptionHandler = true;
     private boolean persistUserBetweenSessions = false;
+    String defaultExceptionType = "android";
 
     private MetaData metaData = new MetaData();
     private final Collection<BeforeNotify> beforeNotifyTasks = new LinkedList<BeforeNotify>();

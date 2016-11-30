@@ -33,6 +33,22 @@ struct bugsnag_ndk_report *g_bugsnag_report;
 unwind_struct *g_native_code;
 
 /**
+ * Removes any path from the filename to make it consistent across API versions
+ */
+static char* strip_path_from_file(const char* file) {
+
+    char* pos = (char *) file;
+    char* newpos = strchr(pos, '/');
+
+    while (newpos) {
+        pos = newpos + 1;
+        newpos = strchr(pos, '/');
+    }
+
+    return pos;
+}
+
+/**
  * Manually notify to Bugsnag
  * uses the java notifier to send basic information
  *
@@ -75,7 +91,7 @@ void notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
 
                 jstring filename;
                 if (info.dli_fname != NULL) {
-                    filename = (*env)->NewStringUTF(env, info.dli_fname);
+                    filename = (*env)->NewStringUTF(env, strip_path_from_file(info.dli_fname));
                 } else {
                     filename = (*env)->NewStringUTF(env, "");
                 }
