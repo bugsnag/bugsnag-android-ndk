@@ -116,7 +116,8 @@ size_t unwind_current_context(void** buffer, size_t max) {
  * NOTE: some methods seem to get added to binaries automatically to catch arithmetic errors
  */
 int is_system_method(const char *method) {
-    if (starts_with("__aeabi_", method)) {
+    if (starts_with("__aeabi_", method)
+        || starts_with("oatexec", method)) {
         return 1;
     } else {
         return 0;
@@ -131,6 +132,7 @@ int is_system_file(const char *file) {
         || starts_with("libc.so", file)
         || starts_with("libdvm.so", file)
         || starts_with("libcutils.so", file)
+        || starts_with("base.odex", file)
         || starts_with("[heap]", file)) {
         return 1;
     } else {
