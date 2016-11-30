@@ -134,7 +134,7 @@ public class MainActivity extends Activity {
         clickButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Bugsnag.getClient().notify(new RuntimeException("test notify"));
+                //Bugsnag.getClient().notify(new RuntimeException("test notify"));
                 nativeNotify();
             }
         });
