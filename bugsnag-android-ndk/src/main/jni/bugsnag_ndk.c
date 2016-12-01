@@ -54,7 +54,7 @@ static char* strip_path_from_file(const char* file) {
  *
  * TODO: also include any meta data, breadcrumbs or user data that has been set in C?
  */
-void notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
+void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
     BUGSNAG_LOG("In notify");
 
     void* frames[BUGSNAG_FRAMES_MAX];
@@ -347,6 +347,38 @@ Java_com_bugsnag_android_ndk_BugsnagObserver_populateReleaseStagesDetails(JNIEnv
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_BugsnagObserver_populateFilterDetails(JNIEnv *env, jclass type) {
     bsg_load_filters(env, g_bugsnag_report);
+}
+
+void bugsnag_set_user(char* id, char* email, char* name) {
+    bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "id", id);
+    bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "email", email);
+    bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "name", name);
+}
+
+void bugsnag_leave_breadcrumb(const char *name, bsg_breadcrumb_t type) {
+
+    time_t rawtime;
+    time ( &rawtime );
+
+    bsg_breadcrumb* crumb = malloc(sizeof(struct bsg_breadcrumb));
+    crumb->name = name;
+    crumb->timestamp = rawtime;
+    crumb->type = type;
+    crumb->metadata = NULL;
+
+    bugsnag_event_add_breadcrumb(g_bugsnag_report->event, crumb);
+}
+
+void bugsnag_add_string_to_tab(char *tab, char *key, char *value) {
+    bugsnag_event_set_metadata_string(g_bugsnag_report->event, tab, key, value);
+}
+
+void bugsnag_add_number_to_tab(char *tab, char *key, double value) {
+    bugsnag_event_set_metadata_number(g_bugsnag_report->event, tab, key, value);
+}
+
+void bugsnag_add_bool_to_tab(char *tab, char *key, int value) {
+    bugsnag_event_set_metadata_bool(g_bugsnag_report->event, tab, key, value);
 }
 
 /**

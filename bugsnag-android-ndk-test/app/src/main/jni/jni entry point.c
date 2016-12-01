@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <dlfcn.h>
+#include "report.h"
 
 static void __attribute__((used)) somefakefunc(void) {}
 
@@ -95,6 +96,21 @@ int crash_stack_overflow() {
 
 JNIEXPORT int JNICALL
 Java_com_bugsnag_android_ndk_test_MainActivity_causeFpe(JNIEnv *env, jobject instance) {
+    void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
+    void (*bugsnag_set_user) (char *, char *, char *) = dlsym(libbugsnag, "bugsnag_set_user");
+    void (*bugsnag_leave_breadcrumb) (const char *, bsg_breadcrumb_t) = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
+    void (*bugsnag_add_string_to_tab) (char *, char *, char *) = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
+    void (*bugsnag_add_number_to_tab) (char *, char *, double) = dlsym(libbugsnag, "bugsnag_add_number_to_tab");
+    void (*bugsnag_add_bool_to_tab) (char *, char *, int) = dlsym(libbugsnag, "bugsnag_add_bool_to_tab");
+
+    bugsnag_set_user("12345", "test@example.com", "Mr Test");
+
+    bugsnag_leave_breadcrumb("App loaded", BSG_CRUMB_STATE);
+
+    bugsnag_add_string_to_tab("ndk", "ndk string", "test value");
+    bugsnag_add_number_to_tab("ndk", "ndk number", 3.145);
+    bugsnag_add_bool_to_tab("ndk", "ndk bool", 1);
+
     return crash_floating_point();
 }
 
@@ -123,22 +139,15 @@ Java_com_bugsnag_android_ndk_test_MainActivity_causeIll(JNIEnv *env, jobject ins
     crash_priv_inst();
 }
 
-typedef enum {
-    /** An unhandled exception */
-            BSG_SEVERITY_ERR,
-    /** A handled exception */
-            BSG_SEVERITY_WARN,
-    /** Custom, notable error messages */
-            BSG_SEVERITY_INFO,
-} bsg_severity_t;
-
 void internal_notify(JNIEnv *env) {
     // TODO: hack to allow call to manual notify without including the bugsnag code
     // This should be replaced with a better way to include to code
     void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
-    void (*notify) (JNIEnv *, char*, char*, bsg_severity_t) = dlsym(libbugsnag, "notify");
+    void (*bugsnag_notify) (JNIEnv *, char *, char *, bsg_severity_t) = dlsym(libbugsnag, "bugsnag_notify");
+    void (*bugsnag_set_user) (char *, char *, char *) = dlsym(libbugsnag, "bugsnag_set_user");
 
-    notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
+    bugsnag_set_user("12345", "test@example.com", "Mr Test");
+    bugsnag_notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
 }
 
 JNIEXPORT void JNICALL

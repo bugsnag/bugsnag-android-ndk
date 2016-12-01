@@ -37,8 +37,17 @@ extern int setupBugsnag(JNIEnv *);
  */
 extern void tearDownBugsnag();
 
-extern void notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
+extern void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
 
+extern void bugsnag_set_user(char* id, char* email, char* name);
+
+extern void bugsnag_leave_breadcrumb(const char *name, bsg_breadcrumb_t type);
+
+extern void bugsnag_add_string_to_tab(char *tab, char *key, char *value);
+
+extern void bugsnag_add_number_to_tab(char *tab, char *key, double value);
+
+extern void bugsnag_add_bool_to_tab(char *tab, char *key, int value);
 
 #ifdef __cplusplus
 }
