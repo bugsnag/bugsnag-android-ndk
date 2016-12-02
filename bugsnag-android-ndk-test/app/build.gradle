@@ -52,13 +52,15 @@ android {
 
 }
 
-
-
 apply plugin: 'com.bugsnag.android.gradle'
-
+bugsnag {
+    endpoint 'http://localhost:9000'
+    overwrite true
+    retryCount 3
+}
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+   // compile fileTree(dir: 'libs', include: ['*.jar'])
     compile "com.android.support:support-annotations:25.0.0"
     compile project(':bugsnag-android-release')
     compile project(':bugsnag-android-ndk-release')

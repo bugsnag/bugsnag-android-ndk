@@ -43,7 +43,8 @@ public class MainActivity extends Activity {
         BugsnagObserver ob = new BugsnagObserver();
 
         Configuration config = new Configuration("c8f000122272e15e5f06e31d540cc79c");
-        config.setEndpoint("http://10.0.2.2:8000");//"http://notify.bugsnag.com");
+        config.setEndpoint("http://10.0.2.2:8000");
+        //config.setEndpoint("http://notify.bugsnag.com");
 
         Bugsnag.init(this, config);
 
