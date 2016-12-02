@@ -139,17 +139,27 @@ Java_com_bugsnag_android_ndk_test_MainActivity_causeIll(JNIEnv *env, jobject ins
     crash_priv_inst();
 }
 
-void internal_notify(JNIEnv *env) {
-    // TODO: hack to allow call to manual notify without including the bugsnag code
-    // This should be replaced with a better way to include to code
+void (*bugsnag_notify) (JNIEnv *, char *, char *, bsg_severity_t);
+void (*bugsnag_notify_meta) (JNIEnv *, char *, char *, bsg_severity_t, JSON_Object *);
+void (*bugsnag_set_user) (JNIEnv *, char *, char *, char *);
+void (*bugsnag_leave_breadcrumb) (JNIEnv *, char *, bsg_breadcrumb_t);
+void (*bugsnag_add_string_to_tab) (JNIEnv *, char *, char *, char *);
+void (*bugsnag_add_number_to_tab) (JNIEnv *, char *, char *, double);
+void (*bugsnag_add_bool_to_tab) (JNIEnv *, char *, char *, int);
+
+void init_bugsnag_methods() {
     void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
-    void (*bugsnag_notify) (JNIEnv *, char *, char *, bsg_severity_t) = dlsym(libbugsnag, "bugsnag_notify");
-    void (*bugsnag_notify_meta) (JNIEnv *, char *, char *, bsg_severity_t, JSON_Object *) = dlsym(libbugsnag, "bugsnag_notify_meta");
-    void (*bugsnag_set_user) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_set_user");
-    void (*bugsnag_leave_breadcrumb) (JNIEnv *, char *, bsg_breadcrumb_t) = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
-    void (*bugsnag_add_string_to_tab) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
-    void (*bugsnag_add_number_to_tab) (JNIEnv *, char *, char *, double) = dlsym(libbugsnag, "bugsnag_add_number_to_tab");
-    void (*bugsnag_add_bool_to_tab) (JNIEnv *, char *, char *, int) = dlsym(libbugsnag, "bugsnag_add_bool_to_tab");
+    bugsnag_notify = dlsym(libbugsnag, "bugsnag_notify");
+    bugsnag_notify_meta = dlsym(libbugsnag, "bugsnag_notify_meta");
+    bugsnag_set_user = dlsym(libbugsnag, "bugsnag_set_user");
+    bugsnag_leave_breadcrumb = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
+    bugsnag_add_string_to_tab = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
+    bugsnag_add_number_to_tab = dlsym(libbugsnag, "bugsnag_add_number_to_tab");
+    bugsnag_add_bool_to_tab = dlsym(libbugsnag, "bugsnag_add_bool_to_tab");
+}
+
+void internal_notify(JNIEnv *env) {
+    init_bugsnag_methods();
 
     bugsnag_set_user(env, "12345", "test@example.com", "Mr Test");
 
