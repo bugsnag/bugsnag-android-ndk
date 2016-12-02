@@ -1,6 +1,7 @@
 package com.bugsnag.android;
 
 import java.sql.BatchUpdateException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -127,6 +128,28 @@ class NativeInterface {
 
     public static String[] getReleaseStages() {
         return Bugsnag.getClient().config.getNotifyReleaseStages();
+    }
+
+    public static void setUser(final String id,
+                               final String email,
+                               final String name) {
+
+        Bugsnag.getClient().setUserId(id, false);
+        Bugsnag.getClient().setUserEmail(email, false);
+        Bugsnag.getClient().setUserName(name, false);
+    }
+
+    public static void leaveBreadcrumb(final String name,
+                                       final BreadcrumbType type) {
+
+        Bugsnag.getClient().leaveBreadcrumb(name, type, new HashMap<String, String>(), false);
+    }
+
+    public static void addToTab(final String tab,
+                                final String key,
+                                final Object value) {
+
+        Bugsnag.getClient().config.getMetaData().addToTab(tab, key, value, false);
     }
 
     public static void notify(final String name,

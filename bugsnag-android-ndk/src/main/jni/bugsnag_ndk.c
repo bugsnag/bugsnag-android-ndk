@@ -349,13 +349,15 @@ Java_com_bugsnag_android_ndk_BugsnagObserver_populateFilterDetails(JNIEnv *env, 
     bsg_load_filters(env, g_bugsnag_report);
 }
 
-void bugsnag_set_user(char* id, char* email, char* name) {
+void bugsnag_set_user(JNIEnv *env, char* id, char* email, char* name) {
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "id", id);
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "email", email);
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "name", name);
+
+    bsg_set_user(env, id, email, name);
 }
 
-void bugsnag_leave_breadcrumb(const char *name, bsg_breadcrumb_t type) {
+void bugsnag_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type) {
 
     time_t rawtime;
     time ( &rawtime );
@@ -367,18 +369,26 @@ void bugsnag_leave_breadcrumb(const char *name, bsg_breadcrumb_t type) {
     crumb->metadata = NULL;
 
     bugsnag_event_add_breadcrumb(g_bugsnag_report->event, crumb);
+
+    bsg_leave_breadcrumb(env, name, type);
 }
 
-void bugsnag_add_string_to_tab(char *tab, char *key, char *value) {
+void bugsnag_add_string_to_tab(JNIEnv *env, char *tab, char *key, char *value) {
     bugsnag_event_set_metadata_string(g_bugsnag_report->event, tab, key, value);
+
+    bsg_add_string_to_tab(env, tab, key, value);
 }
 
-void bugsnag_add_number_to_tab(char *tab, char *key, double value) {
+void bugsnag_add_number_to_tab(JNIEnv *env, char *tab, char *key, double value) {
     bugsnag_event_set_metadata_number(g_bugsnag_report->event, tab, key, value);
+
+    bsg_add_number_to_tab(env, tab, key, value);
 }
 
-void bugsnag_add_bool_to_tab(char *tab, char *key, int value) {
+void bugsnag_add_bool_to_tab(JNIEnv *env, char *tab, char *key, int value) {
     bugsnag_event_set_metadata_bool(g_bugsnag_report->event, tab, key, value);
+
+    bsg_add_boolean_to_tab(env, tab, key, value);
 }
 
 /**

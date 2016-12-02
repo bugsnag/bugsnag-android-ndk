@@ -58,6 +58,23 @@ public class MetaData implements JsonStream.Streamable {
      * @param  value    the contents of the diagnostic information
      */
     public void addToTab(String tabName, String key, Object value) {
+        addToTab(tabName, key, value, true);
+    }
+
+    /**
+     * Add diagnostic information to a tab of this MetaData.
+     *
+     * For example:
+     *
+     *     metaData.addToTab("account", "name", "Acme Co.");
+     *     metaData.addToTab("account", "payingCustomer", true);
+     *
+     * @param  tabName  the dashboard tab to add diagnostic data to
+     * @param  key      the name of the diagnostic information
+     * @param  value    the contents of the diagnostic information
+     * @param  notify   whether or not to notify any NDK observers about this change
+     */
+    void addToTab(String tabName, String key, Object value, boolean notify) {
         Map<String, Object> tab = getTab(tabName);
 
         if(value != null) {
@@ -66,7 +83,9 @@ public class MetaData implements JsonStream.Streamable {
             tab.remove(key);
         }
 
-        Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
+        if (notify) {
+            Bugsnag.getClient().notifyBugsnagObservers(NotifyType.META);
+        }
     }
 
     /**

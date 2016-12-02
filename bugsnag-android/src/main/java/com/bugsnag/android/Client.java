@@ -345,12 +345,25 @@ public class Client extends Observable {
      * @param id a unique identifier of the current user
      */
     public void setUserId(String id) {
+        setUserId(id, true);
+    }
+
+    /**
+     * Sets the user ID with the option to not notify any NDK components of the change
+     *
+     * @param id a unique identifier of the current user
+     * @param notify whether or not to notify NDK components
+     */
+    void setUserId(String id, boolean notify) {
         user.setId(id);
 
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_ID_KEY, id);
         }
-        notifyBugsnagObservers(NotifyType.USER);
+
+        if (notify) {
+            notifyBugsnagObservers(NotifyType.USER);
+        }
     }
 
     /**
@@ -360,12 +373,25 @@ public class Client extends Observable {
      * @param email the email address of the current user
      */
     public void setUserEmail(String email) {
+        setUserEmail(email, true);
+    }
+
+    /**
+     * Sets the user email with the option to not notify any NDK components of the change
+     *
+     * @param email the email address of the current user
+     * @param notify whether or not to notify NDK components
+     */
+    void setUserEmail(String email, boolean notify) {
         user.setEmail(email);
 
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_EMAIL_KEY, email);
         }
-        notifyBugsnagObservers(NotifyType.USER);
+
+        if (notify) {
+            notifyBugsnagObservers(NotifyType.USER);
+        }
     }
 
     /**
@@ -375,12 +401,25 @@ public class Client extends Observable {
      * @param name the name of the current user
      */
     public void setUserName(String name) {
+        setUserName(name, true);
+    }
+
+    /**
+     * Sets the user name with the option to not notify any NDK components of the change
+     *
+     * @param name the name of the current user
+     * @param notify whether or not to notify NDK components
+     */
+    void setUserName(String name, boolean notify) {
         user.setName(name);
 
         if (config.getPersistUserBetweenSessions()) {
             storeInSharedPrefs(USER_NAME_KEY, name);
         }
-        notifyBugsnagObservers(NotifyType.USER);
+
+        if (notify) {
+            notifyBugsnagObservers(NotifyType.USER);
+        }
     }
 
     /**
@@ -561,8 +600,18 @@ public class Client extends Observable {
     }
 
     public void leaveBreadcrumb(String name, BreadcrumbType type, Map<String, String> metadata) {
+        leaveBreadcrumb(name, type, metadata, true);
+    }
+
+    void leaveBreadcrumb(String name,
+                         BreadcrumbType type,
+                         Map<String, String> metadata,
+                         boolean notify) {
         breadcrumbs.add(name, type, metadata);
-        notifyBugsnagObservers(NotifyType.BREADCRUMB);
+
+        if (notify) {
+            notifyBugsnagObservers(NotifyType.BREADCRUMB);
+        }
     }
 
     /**

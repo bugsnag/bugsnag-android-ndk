@@ -553,8 +553,6 @@ void bsg_add_meta_data_array_item(JNIEnv *env, JSON_Array* array, jobject value,
  * Gets the meta data from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_meta_data(JNIEnv *env, bsg_event *event, struct bugsnag_ndk_string_array *filters) {
-    BUGSNAG_LOG("bsg_populate_meta_data");
-
     // wipe the existing structure
     bugsnag_event_clear_metadata_base(event);
 
@@ -595,7 +593,6 @@ void bsg_populate_meta_data(JNIEnv *env, bsg_event *event, struct bugsnag_ndk_st
  * Gets the user details from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_user_details(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_user_details");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     bugsnag_event_set_string(event, BSG_USER, "id", get_method_string(env, interface_class, "getUserId"));
@@ -609,7 +606,6 @@ void bsg_populate_user_details(JNIEnv *env, bsg_event *event) {
  * Gets the app data details from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_app_data(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_app_data");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     bugsnag_event_set_string(event, BSG_APP, "releaseStage", get_method_string(env, interface_class, "getReleaseStage"));
@@ -653,7 +649,6 @@ void bsg_populate_device_cpu_abi(JNIEnv *env, bsg_event *event, jclass interface
  * Gets the device data details from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_device_data");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     bugsnag_event_set_string(event, BSG_DEVICE, "osName", "Android");
@@ -682,7 +677,6 @@ void bsg_populate_device_data(JNIEnv *env, bsg_event *event) {
  * Gets the context from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_context(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_context");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     event->context = get_method_string(env, interface_class, "getContext");
@@ -780,8 +774,6 @@ time_t bsg_get_time_from_string(const char* time_details) {
  * Gets the breadcrumbs from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
-    BUGSNAG_LOG("bsg_populate_breadcrumbs");
-
     // Clear out existing breadcrumbs
     bugsnag_event_clear_breadcrumbs(event);
 
@@ -848,8 +840,6 @@ void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
  * Gets the release stages from the client to store for later
  */
 void bsg_load_release_stages(JNIEnv *env, struct bugsnag_ndk_report *report) {
-    BUGSNAG_LOG("bsg_load_release_stages");
-
     // Clear existing release stages
     if (report->notify_release_stages.values) {
         free(report->notify_release_stages.values);
@@ -882,8 +872,6 @@ void bsg_load_release_stages(JNIEnv *env, struct bugsnag_ndk_report *report) {
  * Gets the filters from the client to store for later
  */
 void bsg_load_filters(JNIEnv *env, struct bugsnag_ndk_report *report) {
-    BUGSNAG_LOG("bsg_load_filters");
-
     // Clear existing filters
     if (report->filters.values) {
         free(report->filters.values);
@@ -916,7 +904,6 @@ void bsg_load_filters(JNIEnv *env, struct bugsnag_ndk_report *report) {
  * Gets the location to write the error files to
  */
 char *bsg_load_error_store_path(JNIEnv *env) {
-    BUGSNAG_LOG("bsg_load_error_store_path");
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     char* path = get_method_string(env, interface_class, "getErrorStorePath");
@@ -930,8 +917,6 @@ char *bsg_load_error_store_path(JNIEnv *env) {
  * Gets details from java to pre-populates the bugsnag error
  */
 void bsg_populate_event_details(JNIEnv *env, struct bugsnag_ndk_report *report) {
-    BUGSNAG_LOG("bsg_populate_event_details");
-
     bsg_event *event = report->event;
     event->severity = BSG_SEVERITY_ERR;
 
@@ -946,3 +931,107 @@ void bsg_populate_event_details(JNIEnv *env, struct bugsnag_ndk_report *report) 
     bsg_load_release_stages(env, report);
     bsg_load_filters(env, report);
 }
+
+void bsg_set_user(JNIEnv *env, char* id, char* email, char* name) {
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID set_user_method = (*env)->GetStaticMethodID(env, interface_class, "setUser", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+
+    jstring jid = (*env)->NewStringUTF(env, id);
+    jstring jemail = (*env)->NewStringUTF(env, email);
+    jstring jname = (*env)->NewStringUTF(env, name);
+
+    (*env)->CallStaticVoidMethod(env, interface_class, set_user_method, jid, jemail, jname);
+
+
+    (*env)->DeleteLocalRef(env, jid);
+    (*env)->DeleteLocalRef(env, jemail);
+    (*env)->DeleteLocalRef(env, jname);
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+void bsg_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type) {
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID leave_breadcrumb_method = (*env)->GetStaticMethodID(env, interface_class, "leaveBreadcrumb", "(Ljava/lang/String;Lcom/bugsnag/android/BreadcrumbType;)V");
+
+
+    jclass type_class = (*env)->FindClass(env, "com/bugsnag/android/BreadcrumbType");
+    jfieldID type_field;
+    if (type == BSG_CRUMB_MANUAL) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "MANUAL", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_ERROR) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "ERROR", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_LOG) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "LOG", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_NAVIGATION) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "NAVIGATION", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_PROCESS) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "PROCESS", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_REQUEST) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "REQUEST", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else if (type == BSG_CRUMB_STATE) {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "STATE", "Lcom/bugsnag/android/BreadcrumbType;");
+    } else {
+        type_field = (*env)->GetStaticFieldID(env, type_class , "USER", "Lcom/bugsnag/android/BreadcrumbType;");
+    }
+
+    jobject jtype = (*env)->GetStaticObjectField(env, type_class, type_field);
+    jstring jname = (*env)->NewStringUTF(env, name);
+    (*env)->CallStaticVoidMethod(env, interface_class, leave_breadcrumb_method, jname, jtype);
+
+
+    (*env)->DeleteLocalRef(env, jtype);
+    (*env)->DeleteLocalRef(env, jname);
+
+    (*env)->DeleteLocalRef(env, type_class);
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+void bsg_add_to_tab(JNIEnv *env, char *tab, char *key, jobject value) {
+
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID add_to_tab_method = (*env)->GetStaticMethodID(env, interface_class, "addToTab", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V");
+
+    jstring jtab = (*env)->NewStringUTF(env, tab);
+    jstring jkey = (*env)->NewStringUTF(env, key);
+
+    (*env)->CallStaticVoidMethod(env, interface_class, add_to_tab_method, jtab, jkey, value);
+
+    (*env)->DeleteLocalRef(env, jtab);
+    (*env)->DeleteLocalRef(env, jkey);
+    (*env)->DeleteLocalRef(env, interface_class);
+}
+
+void bsg_add_string_to_tab(JNIEnv *env, char *tab, char *key, char* value) {
+    jstring jvalue = (*env)->NewStringUTF(env, value);
+
+    bsg_add_to_tab(env, tab, key, jvalue);
+
+    (*env)->DeleteLocalRef(env, jvalue);
+}
+
+void bsg_add_number_to_tab(JNIEnv *env, char *tab, char *key, double value) {
+    jclass double_class = (*env)->FindClass(env, "java/lang/Double");
+    jmethodID double_constructor = (*env)->GetMethodID(env, double_class, "<init>", "(D)V");
+    jobject jvalue = (*env)->NewObject(env, double_class, double_constructor, (jdouble)value);
+
+    bsg_add_to_tab(env, tab, key, jvalue);
+
+    (*env)->DeleteLocalRef(env, double_class);
+    (*env)->DeleteLocalRef(env, jvalue);
+}
+
+void bsg_add_boolean_to_tab(JNIEnv *env, char *tab, char *key, int value) {
+    jclass boolean_class = (*env)->FindClass(env, "java/lang/Boolean");
+    jmethodID boolean_constructor = (*env)->GetMethodID(env, boolean_class, "<init>", "(Z)V");
+    jobject jvalue = (*env)->NewObject(env, boolean_class, boolean_constructor, (jboolean)value);
+
+    bsg_add_to_tab(env, tab, key, jvalue);
+
+    (*env)->DeleteLocalRef(env, boolean_class);
+    (*env)->DeleteLocalRef(env, jvalue);
+}
+
+
+
+
+

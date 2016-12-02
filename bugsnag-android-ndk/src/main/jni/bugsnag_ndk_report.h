@@ -33,4 +33,10 @@ void bsg_populate_context(JNIEnv *env, bsg_event *event);
 void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event);
 void bsg_populate_meta_data(JNIEnv *env, bsg_event *event, struct bugsnag_ndk_string_array *filters);
 
+void bsg_set_user(JNIEnv *env, char* id, char* email, char* name);
+void bsg_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type);
+void bsg_add_string_to_tab(JNIEnv *env, char *tab, char *key, char* value);
+void bsg_add_number_to_tab(JNIEnv *env, char *tab, char *key, double value);
+void bsg_add_boolean_to_tab(JNIEnv *env, char *tab, char *key, int value);
+
 #endif //BUGSNAGNDK_REPORT_H
