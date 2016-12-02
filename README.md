@@ -1,5 +1,5 @@
 # Bugsnag exception reporter for Android NDK (BETA)
-[![Documentation](https://img.shields.io/badge/documentation-1.0.0-blue.svg)](http://docs.bugsnag.com/platforms/android/ndk/)
+[![Documentation](https://img.shields.io/badge/documentation-0.1.0-blue.svg)](http://docs.bugsnag.com/platforms/android/ndk/)
 
 ## Features
 
