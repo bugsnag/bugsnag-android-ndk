@@ -1,4 +1,4 @@
-# Bugsnag exception reporter for Android NDK
+# Bugsnag exception reporter for Android NDK (BETA)
 [![Documentation](https://img.shields.io/badge/documentation-1.1.3-blue.svg)](http://docs.bugsnag.com/platforms/android/ndk/)
 
 ## Features
