@@ -39,6 +39,8 @@ extern void tearDownBugsnag();
 
 extern void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
 
+extern void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t severity, JSON_Object *meta_data);
+
 extern void bugsnag_set_user(JNIEnv *env, char* id, char* email, char* name);
 
 extern void bugsnag_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type);

@@ -155,13 +155,29 @@ class NativeInterface {
     public static void notify(final String name,
                               final String message,
                               final Severity severity,
-                              final StackTraceElement[] stacktrace) {
+                              final StackTraceElement[] stacktrace,
+                              final Map<String, Object> metaData) {
 
         Bugsnag.getClient().notify(name, message, stacktrace, new Callback() {
             @Override
             public void beforeNotify(Report report) {
                 report.getError().setSeverity(severity);
                 report.getError().config.defaultExceptionType = "c";
+
+                for (String tab : metaData.keySet()) {
+
+                    Object value = metaData.get(tab);
+
+                    if (value instanceof Map) {
+                        Map map = (Map)value;
+
+                        for (Object key : map.keySet()) {
+                            report.getError().getMetaData().addToTab(tab, key.toString(), map.get(key));
+                        }
+                    } else {
+                        report.getError().getMetaData().addToTab("custom", tab, value);
+                    }
+                }
             }
         });
     }

@@ -32,6 +32,9 @@ struct bugsnag_ndk_report *g_bugsnag_report;
 /* structure for storing the unwound stack trace */
 unwind_struct *g_native_code;
 
+void populate_meta_object(JNIEnv *env, jobject jmeta, JSON_Object * meta_data);
+void populate_meta_array(JNIEnv *env, jarray jmeta, JSON_Array * meta_data);
+
 /**
  * Removes any path from the filename to make it consistent across API versions
  */
@@ -49,12 +52,126 @@ static char* strip_path_from_file(const char* file) {
 }
 
 /**
- * Manually notify to Bugsnag
- * uses the java notifier to send basic information
- *
- * TODO: also include any meta data, breadcrumbs or user data that has been set in C?
+ * Creates a java Double object using the given double
  */
-void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
+jobject create_double(JNIEnv *env, double dbl) {
+    jclass double_class = (*env)->FindClass(env, "java/lang/Double");
+    jmethodID double_constructor = (*env)->GetMethodID(env, double_class, "<init>", "(D)V");
+    return (*env)->NewObject(env, double_class, double_constructor, (jdouble)dbl);
+}
+
+/**
+ * Creates a java Boolean object using the given bool value
+ */
+jobject create_boolean(JNIEnv *env, int bool) {
+    jclass boolean_class = (*env)->FindClass(env, "java/lang/Boolean");
+    jmethodID boolean_constructor = (*env)->GetMethodID(env, boolean_class, "<init>", "(Z)V");
+    return (*env)->NewObject(env, boolean_class, boolean_constructor, (jboolean)bool);
+}
+
+/**
+ * Populates the given java array with values from the JSON array
+ */
+void populate_meta_array(JNIEnv *env, jarray jmeta, JSON_Array * meta_data) {
+
+    size_t count = json_array_get_count(meta_data);
+
+    for (size_t i = 0; i < count; i++) {
+
+        JSON_Value *value = json_array_get_value(meta_data, i);
+        JSON_Value_Type type = json_value_get_type(value);
+        jobject jvalue = NULL;
+
+        if (type == JSONString) {
+            jvalue = (*env)->NewStringUTF(env, json_array_get_string(meta_data, i));
+        } else if (type == JSONNumber) {
+            jvalue = create_double(env, json_array_get_number(meta_data, i));
+        } else if (type == JSONBoolean) {
+            jvalue = create_boolean(env, json_array_get_boolean(meta_data, i));
+        } else if (type == JSONObject) {
+            jclass hashmap_class = (*env)->FindClass(env, "java/util/HashMap");
+            jmethodID hashmap_constructor = (*env)->GetMethodID(env, hashmap_class, "<init>", "()V");
+            jobject jsubmeta = (*env)->NewObject(env, hashmap_class, hashmap_constructor);
+
+            populate_meta_object(env, jsubmeta, json_array_get_object(meta_data, i));
+
+            jvalue = jsubmeta;
+        } else if (type == JSONArray) {
+            JSON_Array * array = json_array_get_array(meta_data, i);
+            size_t array_size = json_array_get_count(array);
+
+            jobject jsubmeta = (*env)->NewObjectArray(env,
+                                                      array_size,
+                                                      (*env)->FindClass(env, "java/lang/Object"),
+                                                      NULL);
+            populate_meta_array(env, jsubmeta, array);
+
+            jvalue = jsubmeta;
+        }
+
+        if (jvalue != NULL) {
+            (*env)->SetObjectArrayElement(env, jmeta, i, jvalue);
+        }
+    }
+}
+
+/**
+ * Populates the given java hash map with values from the JSON object
+ */
+void populate_meta_object(JNIEnv *env, jobject jmeta, JSON_Object * meta_data) {
+
+    jclass hashmap_class = (*env)->FindClass(env, "java/util/HashMap");
+    jmethodID put_method = (*env)->GetMethodID(env, hashmap_class, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+
+    size_t count = json_object_get_count(meta_data);
+
+    for (size_t i = 0; i < count; i++) {
+
+        const char *name = json_object_get_name(meta_data, i);
+        jstring jname = (*env)->NewStringUTF(env, name);
+
+        JSON_Value *value = json_object_get_value(meta_data, name);
+        JSON_Value_Type type = json_value_get_type(value);
+        jobject jvalue = NULL;
+
+        if (type == JSONString) {
+            jvalue = (*env)->NewStringUTF(env, json_object_get_string(meta_data, name));
+        } else if (type == JSONNumber) {
+            jvalue = create_double(env, json_object_get_number(meta_data, name));
+        } else if (type == JSONBoolean) {
+            jvalue = create_boolean(env, json_object_get_boolean(meta_data, name));
+        } else if (type == JSONObject) {
+            jmethodID hashmap_constructor = (*env)->GetMethodID(env, hashmap_class, "<init>", "()V");
+            jobject jsubmeta = (*env)->NewObject(env, hashmap_class, hashmap_constructor);
+
+            populate_meta_object(env, jsubmeta, json_object_get_object(meta_data, name));
+
+            jvalue = jsubmeta;
+        } else if (type == JSONArray) {
+            JSON_Array * array = json_object_get_array(meta_data, name);
+            size_t array_size = json_array_get_count(array);
+
+            jobject jsubmeta = (*env)->NewObjectArray(env,
+                                                      array_size,
+                                                      (*env)->FindClass(env, "java/lang/Object"),
+                                                      NULL);
+            populate_meta_array(env, jsubmeta, array);
+
+            jvalue = jsubmeta;
+        }
+
+        if (jvalue != NULL) {
+            (*env)->CallObjectMethod(env, jmeta, put_method, jname, jvalue);
+        }
+    }
+}
+
+
+/**
+ * Manually notify to Bugsnag with Meta Data
+ * uses the java notifier to send basic information
+ */
+void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t severity, JSON_Object * meta_data) {
     BUGSNAG_LOG("In notify");
 
     void* frames[BUGSNAG_FRAMES_MAX];
@@ -137,15 +254,34 @@ void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t sever
     jstring jname = (*env)->NewStringUTF(env, name);
     jstring jmessage = (*env)->NewStringUTF(env, message);
 
-    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
-    jmethodID notify_method = (*env)->GetStaticMethodID(env, interface_class, "notify", "(Ljava/lang/String;Ljava/lang/String;Lcom/bugsnag/android/Severity;[Ljava/lang/StackTraceElement;)V");
-    (*env)->CallStaticVoidMethod(env, interface_class, notify_method, jname, jmessage, jseverity, trace);
 
+    // Build a hashmap of meta data
+    jclass hashmap_class = (*env)->FindClass(env, "java/util/HashMap");
+    jmethodID hashmap_constructor = (*env)->GetMethodID(env, hashmap_class, "<init>", "()V");
+    jobject jmeta = (*env)->NewObject(env, hashmap_class, hashmap_constructor);
+    if (meta_data != NULL) {
+        populate_meta_object(env, jmeta, meta_data);
+    }
+
+    jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
+    jmethodID notify_method = (*env)->GetStaticMethodID(env, interface_class, "notify", "(Ljava/lang/String;Ljava/lang/String;Lcom/bugsnag/android/Severity;[Ljava/lang/StackTraceElement;Ljava/util/Map;)V");
+    (*env)->CallStaticVoidMethod(env, interface_class, notify_method, jname, jmessage, jseverity, trace, jmeta);
+
+    (*env)->DeleteLocalRef(env, hashmap_class);
+    (*env)->DeleteLocalRef(env, jmeta);
     (*env)->DeleteLocalRef(env, trace_class);
     (*env)->DeleteLocalRef(env, trace);
     (*env)->DeleteLocalRef(env, severity_class);
     (*env)->DeleteLocalRef(env, jseverity);
     (*env)->DeleteLocalRef(env, interface_class);
+}
+
+/**
+ * Manually notify to Bugsnag
+ * uses the java notifier to send basic information
+ */
+void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
+    bugsnag_notify_meta(env, name, message, severity, NULL);
 }
 
 /**

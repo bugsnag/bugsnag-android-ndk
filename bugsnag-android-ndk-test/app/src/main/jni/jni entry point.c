@@ -144,6 +144,7 @@ void internal_notify(JNIEnv *env) {
     // This should be replaced with a better way to include to code
     void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
     void (*bugsnag_notify) (JNIEnv *, char *, char *, bsg_severity_t) = dlsym(libbugsnag, "bugsnag_notify");
+    void (*bugsnag_notify_meta) (JNIEnv *, char *, char *, bsg_severity_t, JSON_Object *) = dlsym(libbugsnag, "bugsnag_notify_meta");
     void (*bugsnag_set_user) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_set_user");
     void (*bugsnag_leave_breadcrumb) (JNIEnv *, char *, bsg_breadcrumb_t) = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
     void (*bugsnag_add_string_to_tab) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
@@ -156,10 +157,23 @@ void internal_notify(JNIEnv *env) {
     bugsnag_leave_breadcrumb(env, "User quit", BSG_CRUMB_USER);
 
     bugsnag_add_string_to_tab(env, "ndk", "ndk string", "test value");
-    bugsnag_add_number_to_tab(env, "ndk", "ndk number", 3.145);
+    bugsnag_add_number_to_tab(env, "ndk", "ndk number", 3.1415);
     bugsnag_add_bool_to_tab(env, "ndk", "ndk bool", 1);
 
-    bugsnag_notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
+    //bugsnag_notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
+
+
+    JSON_Value * meta_data_v = json_value_init_object();
+    JSON_Object * meta_data = json_value_get_object(meta_data_v);
+
+    JSON_Value * tab_v = json_value_init_object();
+    JSON_Object * tab = json_value_get_object(tab_v);
+    json_object_set_string(tab, "another ndk string", "String value");
+    json_object_set_number(tab, "another ndk number", 123);
+    json_object_set_boolean(tab, "another tab bool", 0);
+    json_object_set_value(meta_data, "ndk", tab_v);
+
+    bugsnag_notify_meta(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO, meta_data);
 }
 
 JNIEXPORT void JNICALL
