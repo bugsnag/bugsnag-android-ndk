@@ -10,8 +10,6 @@
 #include <time.h>
 #include <unwind.h>
 
-#include "headers/libunwind.h"
-
 #include "deps/bugsnag/bugsnag.h"
 #include "deps/bugsnag/report.h"
 
@@ -22,7 +20,6 @@
 typedef struct unwind_struct_frame {
     void *frame_pointer;
     char method[1024];
-    unw_word_t offset;
 } unwind_struct_frame;
 
 /* Structure to store unwound frames */

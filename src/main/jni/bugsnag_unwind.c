@@ -240,110 +240,6 @@ int unwind_frame(unwind_struct* unwind, int max_depth, void* sc) {
 
 /**
  * Uses libcorkscrew to unwind the stacktrace
- * This should work on android greater than 5
- */
-int unwind_libunwind(void *libunwind, unwind_struct* unwind, int max_depth, void* sc) {
-    int (*getcontext) (ucontext_t*);// = dlsym(libunwind, "_Ux86_getcontext");
-    int (*init_local) (unw_cursor_t*, unw_context_t*);// = dlsym(libunwind, "_Ux86_init_local");
-    int (*step) (unw_cursor_t*);// = dlsym(libunwind, "_Ux86_step");
-    int (*get_reg) (unw_cursor_t *, unw_regnum_t, unw_word_t *);// = dlsym(libunwind, "_Ux86_get_reg");
-    int (*get_proc_name) (unw_cursor_t *, char *, size_t, unw_word_t *);
-
-    unw_context_t uwc;
-    unw_cursor_t cursor;
-
-    ucontext_t *const uc = (ucontext_t*) sc;
-
-#if (defined(__arm__))
-    getcontext = dlsym(libunwind, "_Uarm_getcontext");
-    init_local = dlsym(libunwind, "_Uarm_init_local");
-    step = dlsym(libunwind, "_Uarm_step");
-    get_reg = dlsym(libunwind, "_Uarm_get_reg");
-    get_proc_name = dlsym(libunwind, "_Uarm_get_proc_name");
-
-    //ucontext_t* context = (ucontext_t*)reserved;
-    unw_tdep_context_t *unw_ctx = (unw_tdep_context_t*)&uwc;
-    mcontext_t* sig_ctx = &uc->uc_mcontext;
-    //we need to store all the general purpose registers so that libunwind can resolve
-    //    the stack correctly, so we read them from the sigcontext into the unw_context
-    unw_ctx->regs[UNW_ARM_R0] = sig_ctx->arm_r0;
-    unw_ctx->regs[UNW_ARM_R1] = sig_ctx->arm_r1;
-    unw_ctx->regs[UNW_ARM_R2] = sig_ctx->arm_r2;
-    unw_ctx->regs[UNW_ARM_R3] = sig_ctx->arm_r3;
-    unw_ctx->regs[UNW_ARM_R4] = sig_ctx->arm_r4;
-    unw_ctx->regs[UNW_ARM_R5] = sig_ctx->arm_r5;
-    unw_ctx->regs[UNW_ARM_R6] = sig_ctx->arm_r6;
-    unw_ctx->regs[UNW_ARM_R7] = sig_ctx->arm_r7;
-    unw_ctx->regs[UNW_ARM_R8] = sig_ctx->arm_r8;
-    unw_ctx->regs[UNW_ARM_R9] = sig_ctx->arm_r9;
-    unw_ctx->regs[UNW_ARM_R10] = sig_ctx->arm_r10;
-    unw_ctx->regs[UNW_ARM_R11] = sig_ctx->arm_fp;
-    unw_ctx->regs[UNW_ARM_R12] = sig_ctx->arm_ip;
-    unw_ctx->regs[UNW_ARM_R13] = sig_ctx->arm_sp;
-    unw_ctx->regs[UNW_ARM_R14] = sig_ctx->arm_lr;
-    unw_ctx->regs[UNW_ARM_R15] = sig_ctx->arm_pc;
-#elif (defined(__x86_64__))
-    getcontext = dlsym(libunwind, "_Ux86_64_getcontext");
-        init_local = dlsym(libunwind, "_Ux86_64_init_local");
-        step = dlsym(libunwind, "_Ux86_64_step");
-        get_reg = dlsym(libunwind, "_Ux86_64_get_reg");
-        get_proc_name = dlsym(libunwind, "_Ux86_64_get_proc_name");
-
-        uwc = *(unw_context_t*)uc;
-#elif (defined(__i386))
-        getcontext = dlsym(libunwind, "_Ux86_getcontext");
-        init_local = dlsym(libunwind, "_Ux86_init_local");
-        step = dlsym(libunwind, "_Ux86_step");
-        get_reg = dlsym(libunwind, "_Ux86_get_reg");
-        get_proc_name = dlsym(libunwind, "_Ux86_get_proc_name");
-
-        uwc = *(unw_context_t*)uc;
-//#elif defined(__aarch64__)
-//#elif (defined (__ppc__)) || (defined (__powerpc__))
-//#elif (defined(__hppa__))
-//#elif (defined(__sparc__) && defined (__arch64__))
-//#elif (defined(__sparc__) && !defined (__arch64__))
-//#elif (defined(__mips__))
-#else
-        // TODO: add more supported arches
-        getcontext = NULL;
-        init_local = NULL;
-        step = NULL;
-        get_reg = NULL;
-        get_proc_name = NULL;
-#endif
-
-    if (init_local != NULL) {
-        init_local(&cursor, &uwc);
-
-        unw_word_t ip, sp;
-
-        int count = 0;
-        do {
-            unwind_struct_frame *frame = &unwind->frames[count];
-            //uintptr_t offset;
-            get_reg(&cursor, UNW_REG_IP, &ip);
-            get_reg(&cursor, UNW_REG_SP, &sp);
-            //get_proc_name(&cursor, frame->method, 1024, &offset);
-            frame->frame_pointer = (void*)ip;
-
-            // Seems to crash on Android v 5.1 when reaching the bottom of the stack
-            // so quit early when there are no more offsets
-            //if (offset == 0) {
-            //    break;
-            //}
-
-            count++;
-        } while(step(&cursor) > 0 && count < max_depth);
-
-        return count;
-    } else {
-        return unwind_frame(unwind, max_depth, sc);
-    }
-}
-
-/**
- * Uses libcorkscrew to unwind the stacktrace
  * This should work on android less than 5
  */
 int unwind_libcorkscrew(void *libcorkscrew, unwind_struct* unwind, int max_depth, struct siginfo* si, void* sc) {
@@ -415,20 +311,13 @@ int bugsnag_unwind_stack(unwind_struct* unwind, int max_depth, struct siginfo* s
 
     int size;
 
-    void *libunwind = dlopen("libunwind.so", RTLD_LAZY | RTLD_LOCAL);
-    if (libunwind != NULL) {
-        size = unwind_libunwind(libunwind, unwind, max_depth, sc);
+    void *libcorkscrew = dlopen("libcorkscrew.so", RTLD_LAZY | RTLD_LOCAL);
+    if (libcorkscrew != NULL) {
+        size = unwind_libcorkscrew(libcorkscrew, unwind, max_depth, si, sc);
 
-        dlclose(libunwind);
+        dlclose(libcorkscrew);
     } else {
-        void *libcorkscrew = dlopen("libcorkscrew.so", RTLD_LAZY | RTLD_LOCAL);
-        if (libcorkscrew != NULL) {
-            size = unwind_libcorkscrew(libcorkscrew, unwind, max_depth, si, sc);
-
-            dlclose(libcorkscrew);
-        } else {
-            size = unwind_frame(unwind, max_depth, sc);
-        }
+        size = unwind_frame(unwind, max_depth, sc);
     }
 
     return size;
