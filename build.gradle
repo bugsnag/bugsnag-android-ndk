@@ -11,7 +11,6 @@ buildscript {
 }
 
 // Tasks to build and test the android library
-//apply plugin: 'com.android.library'
 apply plugin: 'com.android.model.library'
 model {
     android {
@@ -23,25 +22,12 @@ model {
             targetSdkVersion.apiLevel Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
         }
 
-//        lintOptions {
-//            disable 'DefaultLocale'
-//        }
-
         ndk {
             moduleName "bugsnag-ndk"
             ldLibs.addAll(['log'])
             platformVersion = 9 // Note this must be >=21 for 64 bit architectures
             abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "mips", "arm64-v8a", "x86_64", "mips64"])
             CFlags.add("-std=c99")
-
-//            ldFlags.add("")
-//            toolchain = "clang"
-//            toolchainVersion = "3.9"
-//            CFlags.add("")
-//            cppFlags.add("")
-//            debuggable = false
-//            renderscriptNdkMode = false
-//            stl = "system"
         }
     }
 }
@@ -49,6 +35,3 @@ model {
 dependencies {
     compile "com.android.support:support-annotations:25.0.0"
 }
-
-// Tasks to release the library to maven central
-//apply from: 'https://raw.github.com/chrisbanes/gradle-mvn-push/master/gradle-mvn-push.gradle'
