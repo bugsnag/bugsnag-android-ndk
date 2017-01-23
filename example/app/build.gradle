@@ -57,6 +57,7 @@ bugsnag {
     endpoint 'http://localhost:9000'
     overwrite true
     retryCount 3
+    ndk true
 }
 
 dependencies {
