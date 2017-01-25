@@ -5,7 +5,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle-experimental:0.8.2'
+        classpath 'com.android.tools.build:gradle-experimental:0.8.3'
     }
 }
 
@@ -24,7 +24,7 @@ model {
         ndk {
             moduleName "bugsnag-ndk"
             ldLibs.addAll(['log'])
-            platformVersion = 9 // Note this must be >=21 for 64 bit architectures
+            platformVersion = 21 // Note this must be >=21 for 64 bit architectures
             abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "mips", "arm64-v8a", "x86_64", "mips64"])
             CFlags.add("-std=c99")
         }
@@ -33,4 +33,20 @@ model {
 
 dependencies {
     compile "com.android.support:support-annotations:25.0.0"
+}
+
+apply plugin: 'maven-publish'
+
+publishing {
+    publications {
+        Publication(MavenPublication) {
+            artifact file('build/outputs/aar/bugsnag-android-ndk-release.aar')
+            groupId 'com.bugsnag'
+            artifactId 'bugsnag-android-ndk'
+            version project.VERSION_NAME
+        }
+    }
+    repositories {
+        mavenCentral()
+    }
 }
