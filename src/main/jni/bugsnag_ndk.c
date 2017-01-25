@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <assert.h>
 
 #include <jni.h>
 
@@ -31,6 +32,8 @@ struct bugsnag_ndk_report *g_bugsnag_report;
 
 /* structure for storing the unwound stack trace */
 unwind_struct *g_native_code;
+
+JNIEnv *bugsnagGlobalEnv;
 
 void populate_meta_object(JNIEnv *env, jobject jmeta, JSON_Object * meta_data);
 void populate_meta_array(JNIEnv *env, jarray jmeta, JSON_Array * meta_data);
@@ -166,10 +169,25 @@ void populate_meta_object(JNIEnv *env, jobject jmeta, JSON_Object * meta_data) {
     }
 }
 
+void bugsnag_init(JNIEnv *env) {
+    bugsnagGlobalEnv = env;
+}
 
 /**
- * Manually notify to Bugsnag with Meta Data
- * uses the java notifier to send basic information
+ * Sends an error report to Bugsnag, optionally attaching a JSON object as metadata. Metadata is
+ * formatted as a mapping of named sections of key/value pairs.
+ * For example, to attach the value `{"account": {"name": "Acme Co."}}`, construct the JSON value
+ * and include it in the invocation of `bugsnag_notify_meta`.
+ *
+ * ```
+ * JSON_Value *metadata_value = json_value_init_object();
+ * JSON_Object *metadata = json_value_get_object(metadata_value);
+ * JSON_Value *section_value = json_value_init_object();
+ * JSON_Object *section = json_value_get_object(tab_value);
+ * json_object_set_string(tab, "name", "Acme Co.");
+ * json_object_set_value(meta_data, "account", tab_value);
+ * bugsnag_notify_meta(env, "Corrupt Store", "Account registry invalidated", metadata);
+ * ```
  */
 void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t severity, JSON_Object * meta_data) {
     BUGSNAG_LOG("In notify");
@@ -280,8 +298,13 @@ void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t 
  * Manually notify to Bugsnag
  * uses the java notifier to send basic information
  */
-void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
+void bugsnag_notify_env(JNIEnv *env, char* name, char* message, bsg_severity_t severity) {
     bugsnag_notify_meta(env, name, message, severity, NULL);
+}
+
+void bugsnag_notify(char* name, char* message, bsg_severity_t severity) {
+    assert(bugsnagGlobalEnv != NULL);
+    bugsnag_notify_meta(bugsnagGlobalEnv, name, message, severity, NULL);
 }
 
 /**
@@ -485,7 +508,7 @@ Java_com_bugsnag_android_ndk_BugsnagObserver_populateFilterDetails(JNIEnv *env, 
     bsg_load_filters(env, g_bugsnag_report);
 }
 
-void bugsnag_set_user(JNIEnv *env, char* id, char* email, char* name) {
+void bugsnag_set_user_env(JNIEnv *env, char* id, char* email, char* name) {
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "id", id);
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "email", email);
     bugsnag_event_set_string(g_bugsnag_report->event, BSG_USER, "name", name);
@@ -493,7 +516,12 @@ void bugsnag_set_user(JNIEnv *env, char* id, char* email, char* name) {
     bsg_set_user(env, id, email, name);
 }
 
-void bugsnag_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type) {
+void bugsnag_set_user(char *id, char *email, char *name) {
+    assert(bugsnagGlobalEnv != NULL);
+    bugsnag_set_user_env(bugsnagGlobalEnv, id, email, name);
+}
+
+void bugsnag_leave_breadcrumb_env(JNIEnv *env, char *name, bsg_breadcrumb_t type) {
 
     time_t rawtime;
     time ( &rawtime );
@@ -507,6 +535,11 @@ void bugsnag_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type) {
     bugsnag_event_add_breadcrumb(g_bugsnag_report->event, crumb);
 
     bsg_leave_breadcrumb(env, name, type);
+}
+
+void bugsnag_leave_breadcrumb(char *name, bsg_breadcrumb_t type) {
+    assert(bugsnagGlobalEnv != NULL);
+    bugsnag_leave_breadcrumb_env(bugsnagGlobalEnv, name, type);
 }
 
 void bugsnag_add_string_to_tab(JNIEnv *env, char *tab, char *key, char *value) {
