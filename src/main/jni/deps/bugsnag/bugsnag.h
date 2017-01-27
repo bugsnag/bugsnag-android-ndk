@@ -6,7 +6,6 @@
 #define BUGSNAG_LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #endif
 
-#include "../deps/parson/parson.h"
 #include "report.h"
 #include "serialize.h"
 

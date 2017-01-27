@@ -36,20 +36,33 @@ extern int setupBugsnag(JNIEnv *);
  * Removes the Bugsnag signal handler
  */
 extern void tearDownBugsnag();
-
-extern void bugsnag_notify(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
-
-extern void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t severity, JSON_Object *meta_data);
-
-extern void bugsnag_set_user(JNIEnv *env, char* id, char* email, char* name);
-
-extern void bugsnag_leave_breadcrumb(JNIEnv *env, char *name, bsg_breadcrumb_t type);
-
-extern void bugsnag_add_string_to_tab(JNIEnv *env, char *tab, char *key, char *value);
-
-extern void bugsnag_add_number_to_tab(JNIEnv *env, char *tab, char *key, double value);
-
-extern void bugsnag_add_bool_to_tab(JNIEnv *env, char *tab, char *key, int value);
+/**
+ * Configure the Bugsnag interface, optionally including the JNI environment.
+ * @param env  The JNI environment to use when using convenience methods
+ */
+void bugsnag_init(JNIEnv *env);
+/**
+ * Sends an error report to Bugsnag
+ * @param name     The name of the error
+ * @param message  The error message
+ * @param severity The severity of the error
+ */
+void bugsnag_notify(char* name, char* message, bsg_severity_t severity);
+void bugsnag_notify_env(JNIEnv *env, char* name, char* message, bsg_severity_t severity);
+/**
+ * Set the current user
+ * @param id    The identifier of the user
+ * @param email The user's email
+ * @param name  The user's name
+ */
+void bugsnag_set_user(char* id, char* email, char* name);
+void bugsnag_set_user_env(JNIEnv *env, char* id, char* email, char* name);
+/**
+ * Leave a breadcrumb, indicating an event of significance which will be logged in subsequent
+ * error reports
+ */
+void bugsnag_leave_breadcrumb(char *name, bsg_breadcrumb_t type);
+void bugsnag_leave_breadcrumb_env(JNIEnv *env, char *name, bsg_breadcrumb_t type);
 
 #ifdef __cplusplus
 }
