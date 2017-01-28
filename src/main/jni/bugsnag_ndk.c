@@ -190,8 +190,6 @@ void bugsnag_init(JNIEnv *env) {
  * ```
  */
 void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t severity, JSON_Object * meta_data) {
-    BUGSNAG_LOG("In notify");
-
     void* frames[BUGSNAG_FRAMES_MAX];
     size_t frames_size = unwind_current_context(frames, BUGSNAG_FRAMES_MAX);
 
@@ -331,8 +329,6 @@ int should_notify_for_release_stage(const char* release_stage) {
  * Handles signals when errors occur and writes a file to the Bugsnag error cache
  */
 static void bugsnag_signal_handler(int code, struct siginfo *si, void *sc) {
-    BUGSNAG_LOG("In bugsnag_signal_handler with signal %d", si->si_signo);
-
     // check to see if this error should be notified
     const char* release_stage = bugsnag_event_get_string(g_bugsnag_report->event, BSG_APP, "releaseStage");
     if (should_notify_for_release_stage(release_stage)) {
@@ -377,8 +373,6 @@ static void bugsnag_signal_handler(int code, struct siginfo *si, void *sc) {
                     uintptr_t file_offset =
                             (uintptr_t) unwind_frame->frame_pointer - (uintptr_t) info.dli_fbase;
                     frame.line_number = (int) file_offset;
-
-                    //BUGSNAG_LOG("%i, %s %s %d", i, frame.file, frame.method, frame.line_number);
 
                     // Check if this is a system file, or handler function
                     if (is_system_file(frame.file)
