@@ -203,8 +203,8 @@ void bugsnag_notify_meta(JNIEnv *env, char* name, char* message, bsg_severity_t 
                                                 (*env)->FindClass(env, "java/lang/StackTraceElement"),
                                                 NULL);
 
-    // Ignore the first 2 frames that are in this notify code
-    int frames_to_process = frames_size - 2;
+    // Ignore the first 3 frames that are in this notify code
+    int frames_to_process = frames_size - 3;
 
     if (frames_to_process > 0) {
         // Create stack trace array
