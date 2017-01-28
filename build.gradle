@@ -31,8 +31,13 @@ model {
     }
 }
 
+repositories {
+    mavenCentral()
+}
+
 dependencies {
     compile "com.android.support:support-annotations:25.0.0"
+    compile 'com.bugsnag:bugsnag-android:3.8.0'
 }
 
 apply plugin: 'maven-publish'

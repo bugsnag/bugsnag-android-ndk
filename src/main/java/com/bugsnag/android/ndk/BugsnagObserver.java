@@ -1,5 +1,7 @@
 package com.bugsnag.android.ndk;
 
+import com.bugsnag.android.NotifyType;
+
 import java.util.Observable;
 import java.util.Observer;
 
