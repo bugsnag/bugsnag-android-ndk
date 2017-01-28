@@ -114,7 +114,6 @@ This process is a little ridiculous...
 
 -   Create a "release" from your new tag on [GitHub Releases](https://github.com/bugsnag/bugsnag-android-ndk/releases)
 -   Upload the generated archive file from `build/outputs/aar/bugsnag-android-ndk-release.aar` on the "edit tag" page for this release tag
--   Zip and attach the headers in `src/main/jni/include` to the release as `headers.zip`
 
 ### 5. Update documentation
 
