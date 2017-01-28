@@ -6,6 +6,7 @@ buildscript {
 
     dependencies {
         classpath 'com.android.tools.build:gradle-experimental:0.8.3'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
     }
 }
 
@@ -41,6 +42,7 @@ dependencies {
 }
 
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 publishing {
     publications {
@@ -55,3 +57,21 @@ publishing {
         mavenCentral()
     }
 }
+// Bintray upload
+bintray {
+    user = "$bintray_user"
+    key = "$bintray_api_key"
+    publications = ['Publication']
+    pkg {
+        repo = 'maven'
+        name = 'bugsnag-android-ndk'
+        userOrg = 'bugsnag'
+        licenses = ['MIT']
+        vcsUrl = 'https://github.com/bugsnag/bugsnag-android-ndk.git'
+        version {
+            name = project.VERSION_NAME
+            vcsTag = "v${project.VERSION_NAME}"
+        }
+    }
+}
+
