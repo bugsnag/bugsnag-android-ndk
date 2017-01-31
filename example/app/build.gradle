@@ -9,13 +9,6 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-
-
-        ndk {
-            // Specifies the ABI configurations of your native
-            // libraries Gradle should build and package with your APK.
-            abiFilters "armeabi", "armeabi-v7a", "x86", "mips" //"arm64-v8a", "x86_64", "mips64"
-        }
     }
 
     signingConfigs {
@@ -52,16 +45,14 @@ android {
 
 }
 
+dependencies {
+    compile "com.android.support:support-annotations:25.0.0"
+    compile "com.bugsnag:bugsnag-android-ndk:1.0.0"
+}
+
 apply plugin: 'com.bugsnag.android.gradle'
 bugsnag {
-    endpoint 'http://localhost:9000'
     overwrite true
     retryCount 3
     ndk true
-}
-
-dependencies {
-   // compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile "com.android.support:support-annotations:25.0.0"
-    compile project(':bugsnag-android-ndk-release')
 }

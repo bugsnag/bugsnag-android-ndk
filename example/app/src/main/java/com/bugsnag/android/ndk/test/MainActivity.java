@@ -8,12 +8,8 @@ import android.widget.Button;
 import com.bugsnag.android.BreadcrumbType;
 import com.bugsnag.android.Bugsnag;
 import com.bugsnag.android.Configuration;
-import com.bugsnag.android.ndk.BugsnagObserver;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class MainActivity extends Activity {
@@ -39,8 +35,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        BugsnagObserver ob = new BugsnagObserver();
 
         Configuration config = new Configuration("c8f000122272e15e5f06e31d540cc79c");
         config.setEndpoint("http://10.0.2.2:8000");
@@ -68,7 +62,6 @@ public class MainActivity extends Activity {
         mapValue.put("KeyObjArray", new Object[] {"StringValue3", 12346F, true});
 
         Map<Object, Object> submapValue = new HashMap<>();
-        submapValue.put(ob, "StringValue2");
         submapValue.put(34343, 123456);
         mapValue.put("submapKey", submapValue);
 

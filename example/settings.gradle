@@ -1,1 +1,1 @@
-include ':app', ':bugsnag-android-release', ':bugsnag-android-ndk-release'
+include ':app'

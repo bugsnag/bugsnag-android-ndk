@@ -4,7 +4,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include "report.h"
+#include <bugsnag.h>
 
 static void __attribute__((used)) somefakefunc(void) {}
 
@@ -96,21 +96,6 @@ int crash_stack_overflow() {
 
 JNIEXPORT int JNICALL
 Java_com_bugsnag_android_ndk_test_MainActivity_causeFpe(JNIEnv *env, jobject instance) {
-//    void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
-//    void (*bugsnag_set_user) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_set_user");
-//    void (*bugsnag_leave_breadcrumb) (JNIEnv *, char *, bsg_breadcrumb_t) = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
-//    void (*bugsnag_add_string_to_tab) (JNIEnv *, char *, char *, char *) = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
-//    void (*bugsnag_add_number_to_tab) (JNIEnv *, char *, char *, double) = dlsym(libbugsnag, "bugsnag_add_number_to_tab");
-//    void (*bugsnag_add_bool_to_tab) (JNIEnv *, char *, char *, int) = dlsym(libbugsnag, "bugsnag_add_bool_to_tab");
-//
-//    bugsnag_set_user(env, "12345", "test@example.com", "Mr Test");
-//
-//    bugsnag_leave_breadcrumb(env, "App loaded", BSG_CRUMB_STATE);
-//
-//    bugsnag_add_string_to_tab(env, "ndk", "ndk string", "test value");
-//    bugsnag_add_number_to_tab(env, "ndk", "ndk number", 3.145);
-//    bugsnag_add_bool_to_tab(env, "ndk", "ndk bool", 1);
-
     return crash_floating_point();
 }
 
@@ -139,54 +124,16 @@ Java_com_bugsnag_android_ndk_test_MainActivity_causeIll(JNIEnv *env, jobject ins
     crash_priv_inst();
 }
 
-void (*bugsnag_notify) (JNIEnv *, char *, char *, bsg_severity_t);
-void (*bugsnag_notify_meta) (JNIEnv *, char *, char *, bsg_severity_t, JSON_Object *);
-void (*bugsnag_set_user) (JNIEnv *, char *, char *, char *);
-void (*bugsnag_leave_breadcrumb) (JNIEnv *, char *, bsg_breadcrumb_t);
-void (*bugsnag_add_string_to_tab) (JNIEnv *, char *, char *, char *);
-void (*bugsnag_add_number_to_tab) (JNIEnv *, char *, char *, double);
-void (*bugsnag_add_bool_to_tab) (JNIEnv *, char *, char *, int);
-
-void init_bugsnag_methods() {
-    void *libbugsnag = dlopen("libbugsnag-ndk.so", RTLD_LAZY | RTLD_LOCAL);
-    bugsnag_notify = dlsym(libbugsnag, "bugsnag_notify");
-    bugsnag_notify_meta = dlsym(libbugsnag, "bugsnag_notify_meta");
-    bugsnag_set_user = dlsym(libbugsnag, "bugsnag_set_user");
-    bugsnag_leave_breadcrumb = dlsym(libbugsnag, "bugsnag_leave_breadcrumb");
-    bugsnag_add_string_to_tab = dlsym(libbugsnag, "bugsnag_add_string_to_tab");
-    bugsnag_add_number_to_tab = dlsym(libbugsnag, "bugsnag_add_number_to_tab");
-    bugsnag_add_bool_to_tab = dlsym(libbugsnag, "bugsnag_add_bool_to_tab");
-}
-
 void internal_notify(JNIEnv *env) {
-    init_bugsnag_methods();
+  bugsnag_init(env);
+  bugsnag_set_user("12345", "test@example.com", "Mr Test");
 
-    bugsnag_set_user(env, "12345", "test@example.com", "Mr Test");
-
-    bugsnag_leave_breadcrumb(env, "App loaded", BSG_CRUMB_STATE);
-    bugsnag_leave_breadcrumb(env, "User quit", BSG_CRUMB_USER);
-
-    bugsnag_add_string_to_tab(env, "ndk", "ndk string", "test value");
-    bugsnag_add_number_to_tab(env, "ndk", "ndk number", 3.1415);
-    bugsnag_add_bool_to_tab(env, "ndk", "ndk bool", 1);
-
-    //bugsnag_notify(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO);
-
-
-    JSON_Value * meta_data_v = json_value_init_object();
-    JSON_Object * meta_data = json_value_get_object(meta_data_v);
-
-    JSON_Value * tab_v = json_value_init_object();
-    JSON_Object * tab = json_value_get_object(tab_v);
-    json_object_set_string(tab, "another ndk string", "String value");
-    json_object_set_number(tab, "another ndk number", 123);
-    json_object_set_boolean(tab, "another tab bool", 0);
-    json_object_set_value(meta_data, "ndk", tab_v);
-
-    bugsnag_notify_meta(env, "Test error", "This is a test notify from NDK", BSG_SEVERITY_INFO, meta_data);
+  bugsnag_leave_breadcrumb("App loaded", BSG_CRUMB_STATE);
+  bugsnag_leave_breadcrumb("User quit", BSG_CRUMB_USER);
+  bugsnag_notify("Test error", "This is a test notify from NDK", BSG_SEVERITY_WARN);
 }
 
 JNIEXPORT void JNICALL
 Java_com_bugsnag_android_ndk_test_MainActivity_nativeNotify(JNIEnv *env, jobject instance) {
-    internal_notify(env);
+  internal_notify(env);
 }
