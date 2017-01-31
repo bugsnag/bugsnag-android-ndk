@@ -85,6 +85,7 @@ publishing {
             pom.withXml {
                 def root = asNode()
                 root.appendNode('name', project.POM_NAME)
+                root.appendNode('packaging', project.POM_PACKAGING)
                 root.appendNode('url', project.POM_URL)
                 root.appendNode('description', project.POM_DESCRIPTION)
                 root.appendNode('inceptionYear', '2016')
