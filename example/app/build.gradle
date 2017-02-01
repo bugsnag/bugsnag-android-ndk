@@ -23,13 +23,11 @@ android {
 
     buildTypes {
         debug {
-            //applicationIdSuffix ".debug"
-            //minifyEnabled true
-            //proguardFiles.add(file('proguard-rules.pro'))
+            applicationIdSuffix ".debug"
         }
 
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles.add(file('proguard-rules.pro'))
             proguardFiles.add(getDefaultProguardFile('proguard-android.txt'))
 

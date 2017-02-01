@@ -22,7 +22,7 @@
             </intent-filter>
         </activity>
 
-        <meta-data android:name="com.bugsnag.android.API_KEY" android:value="c8f000122272e15e5f06e31d540cc79c"/>
+        <meta-data android:name="com.bugsnag.android.API_KEY" android:value="066f5ad3590596f9aa8d601ea89af845"/>
     </application>
 
 </manifest>

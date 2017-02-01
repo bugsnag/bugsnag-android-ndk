@@ -36,11 +36,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Configuration config = new Configuration("c8f000122272e15e5f06e31d540cc79c");
-        config.setEndpoint("http://10.0.2.2:8000");
-        //config.setEndpoint("http://notify.bugsnag.com");
-
-        Bugsnag.init(this, config);
+        Bugsnag.init(this);
 
         Bugsnag.setFilters("KeyString","intArrayKey");
         Bugsnag.setNotifyReleaseStages("production", "development");
@@ -128,7 +124,6 @@ public class MainActivity extends Activity {
         clickButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //Bugsnag.getClient().notify(new RuntimeException("test notify"));
                 nativeNotify();
             }
         });
