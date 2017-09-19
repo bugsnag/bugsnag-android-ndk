@@ -2,18 +2,22 @@ buildscript {
     repositories {
         jcenter()
         mavenLocal()
+        maven { // TODO update
+            url 'https://maven.google.com/'
+            name 'Google'
+        }
     }
 
     dependencies {
         classpath 'com.android.tools.build:gradle-experimental:0.8.3'
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.7.3'
         classpath 'com.android.tools.build:gradle:2.2.3'
         classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.4.1'
     }
 }
 
 ext {
-    supportLibVersion = "25.0.0"
+    supportLibVersion = "26.0.1"
     bugsnagNdkVersion = "1.0.1"
 }
 
@@ -40,6 +44,10 @@ model {
 
 repositories {
     mavenCentral()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 dependencies {

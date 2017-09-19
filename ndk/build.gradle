@@ -1,7 +1,11 @@
 apply plugin: 'com.android.model.library'
 
 repositories {
-    mavenCentral()
+    jcenter()
+    maven { // TODO update
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 model {

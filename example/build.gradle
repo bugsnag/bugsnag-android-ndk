@@ -2,6 +2,10 @@ apply plugin: 'com.android.application'
 
 repositories {
     jcenter()
+    maven { // TODO update
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 android {
