@@ -7,9 +7,10 @@ import android.widget.Button;
 
 import com.bugsnag.android.BreadcrumbType;
 import com.bugsnag.android.Bugsnag;
-import com.bugsnag.android.Configuration;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MainActivity extends Activity {
