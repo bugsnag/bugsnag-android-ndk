@@ -1,0 +1,22 @@
+language: android
+
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-26.0.1
+    - android-16
+    - android-19
+    - android-21
+    - android-26
+    - extra-android-m2repository
+
+env:
+  matrix:
+    - ANDROID_TARGET=android-16 ANDROID_ABI=armeabi-v7a
+    - ANDROID_TARGET=android-19 ANDROID_ABI=armeabi-v7a
+    - ANDROID_TARGET=android-21 ANDROID_ABI=armeabi-v7a
+
+script: ./gradlew clean build
+
+sudo: false
