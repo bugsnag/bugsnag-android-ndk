@@ -14,7 +14,7 @@ android:
     - extra-android-m2repository
 
 before_install:
-  - cp licenses/android-sdk-license $ANDROID_HOME/licenses/android-sdk-license
+  - cp licenses/android-sdk-license $ANDROID_HOMElicenses/android-sdk-license
   - git clone --depth 1 https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
   - export ANDROID_NDK_HOME=$HOME/android-ndk-root
 
