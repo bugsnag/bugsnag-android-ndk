@@ -14,7 +14,7 @@ android:
     - extra-android-m2repository
 
 before_install:
-  - cp licenses/android-sdk-license $ANDROID_HOMElicenses/android-sdk-license
+  - sudo cp licenses/android-sdk-license $ANDROID_HOMElicenses/android-sdk-license
   - git clone --depth 1 https://github.com/urho3d/android-ndk.git $HOME/android-ndk-root
   - export ANDROID_NDK_HOME=$HOME/android-ndk-root
 
@@ -23,3 +23,5 @@ env:
     - ANDROID_TARGET=android-21 ANDROID_ABI=armeabi-v7a
 
 script: ./gradlew clean build
+
+sudo: true
