@@ -21,7 +21,7 @@ model {
             moduleName "bugsnag-ndk"
             ldLibs.addAll(['log'])
             platformVersion = project.hasProperty('ndkPVersion') ? ndkPVersion : 21 // Note this must be >=21 for 64 bit architectures
-            abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "mips", "arm64-v8a", "x86_64", "mips64"])
+            abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "arm64-v8a", "x86_64"])
             CFlags.add("-std=c99")
         }
     }
