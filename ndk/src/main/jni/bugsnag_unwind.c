@@ -20,8 +20,6 @@ uintptr_t get_pc_from_ucontext(const ucontext_t *uc) {
   return uc->uc_mcontext.mc_gregs[MC_PC];
 #elif (defined(__sparc__) && !defined (__arch64__))
   return uc->uc_mcontext.gregs[REG_PC];
-#elif (defined(__mips__))
-  return uc->uc_mcontext.gregs[31];
 #else
 #error "Architecture is unknown, please report me!"
 #endif
@@ -48,8 +46,6 @@ uintptr_t get_sp_from_ucontext(const ucontext_t *uc) {
   return uc->uc_mcontext.mc_gregs[MC_SP];
 #elif (defined(__sparc__) && !defined (__arch64__))
   return uc->uc_mcontext.gregs[REG_SP];
-#elif (defined(__mips__))
-  return uc->uc_mcontext.gregs[29];
 #else
 #error "Architecture is unknown, please report me!"
 #endif

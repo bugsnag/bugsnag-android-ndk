@@ -1,35 +1,131 @@
 apply plugin: 'com.android.model.library'
 
 repositories {
-    mavenCentral()
+    jcenter()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
+    }
 }
 
 model {
     android {
-        compileSdkVersion 24
-        buildToolsVersion "24.0.2"
+        compileSdkVersion Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
+        buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
 
         defaultConfig {
-            minSdkVersion.apiLevel 9
-            targetSdkVersion.apiLevel 24
-            versionCode 1
-            versionName "1.0"
-
-            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-
+            minSdkVersion.apiLevel Integer.parseInt(project.ANDROID_MIN_SDK_VERSION)
         }
-        buildTypes {
-            release {
-                minifyEnabled false
-                proguardFiles.add(file('proguard-rules.pro'))
-            }
+
+        ndk {
+            moduleName "bugsnag-ndk"
+            ldLibs.addAll(['log'])
+            platformVersion = project.hasProperty('ndkPVersion') ? ndkPVersion : 21 // Note this must be >=21 for 64 bit architectures
+            abiFilters.addAll(["armeabi", "armeabi-v7a", "x86", "arm64-v8a", "x86_64"])
+            CFlags.add("-std=c99")
         }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:24.2.1'
-    compile 'com.bugsnag:bugsnag-android:3.8.0'
-    compile rootProject
+    compile "com.android.support:support-annotations:$supportLibVersion"
+    compile "com.bugsnag:bugsnag-android:${project.BUGSNAG_ANDROID_VERSION}"
+}
+
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
+apply plugin: 'signing'
+
+
+def target = 'tmp/bugsnag-android-ndk.aar'
+def pomPath = 'tmp/bugsnag-android-ndk.pom'
+task spliceReleaseArchive(type: Exec, dependsOn: 'generatePomFileForReleaseArchivePublication') {
+    description 'Generates a release archive'
+    commandLine 'make', 'release'
+    outputs.files(file(target), file("${target}.asc"))
+}
+spliceReleaseArchive.onlyIf { !file(target).exists() }
+model {
+    tasks.generatePomFileForReleaseArchivePublication {
+        destination = file(pomPath)
+    }
+}
+
+signing {
+    if (file(target).exists())
+        sign file(target)
+    if (file(pomPath).exists())
+        sign file(pomPath)
+}
+
+publishing {
+    publications {
+        ReleaseArchive(MavenPublication) {
+            artifact file(target)
+            artifact("${target}.asc") {
+                classifier = null
+                extension = 'aar.asc'
+            }
+            artifact("${pomPath}.asc") {
+                classifier = null
+                extension = 'pom.asc'
+            }
+            groupId project.GROUP
+            artifactId project.POM_ARTIFACT_ID
+            version project.VERSION_NAME
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('name', project.POM_NAME)
+                root.remove(root.get('packaging'))
+                root.appendNode('packaging', project.POM_PACKAGING)
+                root.appendNode('url', project.POM_URL)
+                root.appendNode('description', project.POM_DESCRIPTION)
+                root.appendNode('inceptionYear', '2016')
+                def license = root.appendNode('licenses', []).appendNode('license', null)
+                license.appendNode('name', project.POM_LICENCE_NAME)
+                license.appendNode('url', project.POM_LICENCE_URL)
+                license.appendNode('distribution', project.POM_LICENCE_DIST)
+                def dev = root.appendNode('developers', []).appendNode('developer', null)
+                dev.appendNode('id', project.POM_DEVELOPER_ID)
+                dev.appendNode('name', project.POM_DEVELOPER_NAME)
+                dev.appendNode('email', project.POM_DEVELOPER_EMAIL)
+                def dep = root.appendNode('dependencies', []).appendNode('dependency', null)
+                dep.appendNode('groupId', project.GROUP)
+                dep.appendNode('artifactId', project.BUGSNAG_ANDROID_ARTIFACT_ID)
+                dep.appendNode('version', project.BUGSNAG_ANDROID_VERSION)
+                def scm = root.appendNode('scm', null)
+                scm.appendNode('url', project.POM_SCM_URL)
+                scm.appendNode('connection', project.POM_SCM_CONNECTION)
+                scm.appendNode('developerConnection', project.POM_SCM_DEV_CONNECTION)
+            }
+        }
+    }
+    repositories {
+        maven {
+            name 'central'
+            url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials {
+                username = hasProperty("NEXUS_USERNAME") && "$NEXUS_USERNAME" != null ? "$NEXUS_USERNAME" : System.getenv("NEXUS_USERNAME")
+                password = hasProperty("NEXUS_PASSWORD") && "$NEXUS_PASSWORD" != null ? "$NEXUS_PASSWORD" : System.getenv("NEXUS_PASSWORD")
+            }
+        }
+    }
+}
+// Bintray upload
+bintray {
+    user = hasProperty("bintray_user") && "$bintray_user" != null ? "$bintray_user" : System.getenv("bintray_user")
+    key = hasProperty("bintray_api_key") && "$bintray_api_key" != null ? "$bintray_api_key" : System.getenv("bintray_api_key")
+
+    publications = ['ReleaseArchive']
+    pkg {
+        repo = 'maven'
+        name = 'bugsnag-android-ndk'
+        userOrg = 'bugsnag'
+        licenses = ['MIT']
+        vcsUrl = 'https://github.com/bugsnag/bugsnag-android-ndk.git'
+        version {
+            name = project.VERSION_NAME
+            vcsTag = "v${project.VERSION_NAME}"
+        }
+    }
 }

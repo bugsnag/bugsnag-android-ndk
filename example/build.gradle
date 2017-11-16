@@ -1,22 +1,81 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
+apply plugin: 'com.android.application'
 
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.3'
-        classpath 'com.bugsnag:bugsnag-android-gradle-plugin:2.4.1'
+repositories {
+    jcenter()
+    maven {
+        url 'https://maven.google.com/'
+        name 'Google'
     }
 }
 
-allprojects {
-    repositories {
-        mavenLocal()
-        jcenter()
+android {
+
+    compileSdkVersion Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
+    buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
+
+    defaultConfig {
+        applicationId "com.bugsnag.android.ndk.test"
+        minSdkVersion Integer.parseInt(project.ANDROID_MIN_SDK_VERSION)
+        targetSdkVersion Integer.parseInt(project.ANDROID_TARGET_SDK_VERSION)
+
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+
+    signingConfigs {
+        myConfig {
+            storeFile file("../bugsnag-ndk-test.jks")
+            storePassword "bugsnagtest"
+            keyAlias "bugsnag"
+            keyPassword "bugsnagtest"
+            storeType "jks"
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles.add(file('proguard-rules.pro'))
+            proguardFiles.add(getDefaultProguardFile('proguard-android.txt'))
+
+            signingConfig signingConfigs.myConfig
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+        }
+    }
+
+    productFlavors {
+        x86 {
+            ndk {
+                abiFilter "x86"
+            }
+        }
+        arm {
+            ndk {
+                abiFilters "armeabi-v7a", "armeabi"
+            }
+        }
+    }
+
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+dependencies {
+    compile "com.android.support:support-annotations:$supportLibVersion"
+    compile "com.bugsnag:bugsnag-android-ndk:$bugsnagNdkVersion"
+}
+
+apply plugin: 'com.bugsnag.android.gradle'
+bugsnag {
+    overwrite true
+    retryCount 3
+    ndk true
 }

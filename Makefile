@@ -12,14 +12,9 @@ $(RELEASE_ARCHIVE): $(API9_DIR)/release/jni/x86 \
 									 $(API9_DIR)/release/jni/armeabi \
 									 $(API9_DIR)/release/jni/armeabi-v7a \
 									 $(API9_DIR)/release/jni/x86_64 \
-	                                 $(API9_DIR)/release/jni/mips \
-	                                 $(API9_DIR)/release/jni/mips64 \
 	                                 $(API9_DIR)/release/jni/arm64-v8a
 	@cd $(API9_DIR)/release && zip -r $(BASEDIR)/$@ .
 	@echo Generated release archive at $(RELEASE_ARCHIVE)
-
-$(API9_DIR)/release/jni/mips: $(API9_DIR)/$(AAR_FILENAME)
-	@unzip -o $< -d $(API9_DIR)/release
 
 $(API9_DIR)/release/jni/x86: $(API9_DIR)/$(AAR_FILENAME)
 	@unzip -o $< -d $(API9_DIR)/release
