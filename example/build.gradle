@@ -2,14 +2,10 @@ apply plugin: 'com.android.application'
 
 repositories {
     jcenter()
-    maven {
-        url 'https://maven.google.com/'
-        name 'Google'
-    }
+    google()
 }
 
 android {
-
     compileSdkVersion Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
     buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
 
@@ -33,6 +29,8 @@ android {
         }
     }
 
+    flavorDimensions "regular"
+
     buildTypes {
         debug {
             applicationIdSuffix ".debug"
@@ -42,7 +40,6 @@ android {
             minifyEnabled false
             proguardFiles.add(file('proguard-rules.pro'))
             proguardFiles.add(getDefaultProguardFile('proguard-android.txt'))
-
             signingConfig signingConfigs.myConfig
         }
     }
@@ -69,8 +66,10 @@ android {
 }
 
 dependencies {
-    compile "com.android.support:support-annotations:$supportLibVersion"
-    compile "com.bugsnag:bugsnag-android-ndk:$bugsnagNdkVersion"
+    implementation "com.android.support:support-annotations:$supportLibVersion"
+//    implementation "com.bugsnag:bugsnag-android-ndk:1.0.1"
+//    implementation "com.bugsnag:bugsnag-android:4.1.4"
+    implementation project(":ndk")
 }
 
 apply plugin: 'com.bugsnag.android.gradle'
