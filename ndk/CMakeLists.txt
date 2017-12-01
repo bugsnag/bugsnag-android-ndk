@@ -17,20 +17,35 @@ add_library( # Specifies the name of the library.
              SHARED
 
              # Provides a relative path to your source file(s).
-             src/main/jni/bugsnag_ndk.h
              src/main/jni/bugsnag_ndk.c
-             src/main/jni/bugsnag_ndk_report.h
              src/main/jni/bugsnag_ndk_report.c
-             src/main/jni/bugsnag_unwind.h
              src/main/jni/bugsnag_unwind.c
-             src/main/jni/deps/bugsnag/bugsnag.h
-             src/main/jni/deps/bugsnag/report.h
              src/main/jni/deps/bugsnag/report.c
-             src/main/jni/deps/bugsnag/serialize.h
              src/main/jni/deps/bugsnag/serialize.c
-             src/main/jni/deps/deps/parson/parson.h
              src/main/jni/deps/deps/parson/parson.c
+             )
+
+# Specifies a path to native header files.
+include_directories(
+             src/main/jni/
+             src/main/jni/deps/bugsnag
+             src/main/jni/deps/deps
              )
 
 set(BUGSNAG_VERSION 1.0.1)
 target_include_directories(libbugsnag-ndk PRIVATE ${BUGSNAG_DIR}/assets/include)
+
+
+find_library( # Defines the name of the path variable that stores the
+              # location of the NDK library.
+              log-lib
+
+              # Specifies the name of the NDK library that
+              # CMake needs to locate.
+              log )
+
+target_link_libraries( # Specifies the target library.
+                     libbugsnag-ndk
+
+                     # Links the log library to the target library.
+                     ${log-lib} )
