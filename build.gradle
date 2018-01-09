@@ -22,7 +22,7 @@ apply plugin: 'com.jfrog.bintray'
 apply plugin: 'signing'
 
 
-def target = 'tmp/bugsnag-android-ndk.aar'
+def target = 'ndk/build/outputs/aar/ndk-release.aar'
 def pomPath = 'tmp/bugsnag-android-ndk.pom'
 task spliceReleaseArchive(type: Exec, dependsOn: 'generatePomFileForReleaseArchivePublication') {
     description 'Generates a release archive'
