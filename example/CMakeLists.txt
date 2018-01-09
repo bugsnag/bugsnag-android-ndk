@@ -21,9 +21,9 @@ add_library( # Specifies the name of the library.
              src/main/jni/jni-entry-point.cpp)
 
 add_library(lib_bugsnag SHARED IMPORTED)
-set(BUGSNAG_VERSION 1.0.1)
-set(BUGSNAG_DIR ${CMAKE_SOURCE_DIR}/build/intermediates/exploded-aar/com.bugsnag/bugsnag-android-ndk/${BUGSNAG_VERSION})
-set_target_properties(lib_bugsnag PROPERTIES
-    IMPORTED_LOCATION ${BUGSNAG_DIR}/jni/${ANDROID_ABI}/libbugsnag-ndk.so)
-target_include_directories(jni-entry-point PRIVATE ${BUGSNAG_DIR}/assets/include)
-target_link_libraries(jni-entry-point lib_bugsnag)
+set(BUGSNAG_LIB_DIR
+    ${CMAKE_SOURCE_DIR}/build/intermediates/bugsnag-libs)
+set(BUGSNAG_INCLUDE_DIR ${BUGSNAG_LIB_DIR}/assets/include)
+set_target_properties(lib_bugsnag PROPERTIES IMPORTED_LOCATION
+                      ${BUGSNAG_LIB_DIR}/jni/${ANDROID_ABI}/libbugsnag-ndk.so)
+target_include_directories(jni-entry-point PRIVATE ${BUGSNAG_INCLUDE_DIR})

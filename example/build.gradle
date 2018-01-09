@@ -50,19 +50,45 @@ android {
         }
     }
 
-    productFlavors {
-        x86 {
-            ndk {
-                abiFilter "x86"
-            }
+//    productFlavors {
+//        x86 {
+//            ndk {
+//                abiFilter "x86"
+//            }
+//        }
+//        arm {
+//            ndk {
+//                abiFilters "armeabi-v7a", "armeabi"
+//            }
+//        }
+//    }
+
+}
+
+task installBugsnagJNILibs << {
+    def configs = project.configurations.findAll {
+        it.toString().contains('CompileClasspath')
+    }.each { config ->
+        def artifactFile = config.resolvedConfiguration.getFiles().find {
+            it.toString().contains("bugsnag-android-ndk")
         }
-        arm {
-            ndk {
-                abiFilters "armeabi-v7a", "armeabi"
+        if (artifactFile) {
+            copy {
+                from zipTree(artifactFile)
+                into file("${buildDir}/intermediates/bugsnag-libs")
+//                eachFile { it.path = it.path.replaceFirst("^jni", "") }
             }
         }
     }
+}
 
+project.afterEvaluate {
+    project.tasks.findAll {
+        it.name.startsWith("externalNative")
+    }
+    .forEach {
+        it.finalizedBy installBugsnagJNILibs
+    }
 }
 
 dependencies {
