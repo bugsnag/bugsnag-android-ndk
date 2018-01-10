@@ -76,7 +76,6 @@ task installBugsnagJNILibs << {
             copy {
                 from zipTree(artifactFile)
                 into file("${buildDir}/intermediates/bugsnag-libs")
-//                eachFile { it.path = it.path.replaceFirst("^jni", "") }
             }
         }
     }
@@ -87,7 +86,8 @@ project.afterEvaluate {
         it.name.startsWith("externalNative")
     }
     .forEach {
-        it.finalizedBy installBugsnagJNILibs
+        it.dependsOn installBugsnagJNILibs
+        it.doFirst {installBugsnagJNILibs}
     }
 }
 
