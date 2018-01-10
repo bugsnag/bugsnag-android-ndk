@@ -5,6 +5,7 @@
 #ifndef BUGSNAGNDK_REPORT_H
 #define BUGSNAGNDK_REPORT_H
 
+#include "bugsnag_ndk.h"
 #include "deps/bugsnag/bugsnag.h"
 
 struct bugsnag_ndk_string_array {
