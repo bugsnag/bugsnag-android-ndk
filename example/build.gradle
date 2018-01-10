@@ -82,10 +82,15 @@ task installBugsnagJNILibs << {
 }
 
 project.afterEvaluate {
-    project.tasks.findAll {
-        it.name.startsWith("externalNative")
+    def cleanTasks = project.tasks.findAll {
+        it.name.startsWith("externalNative") && it.name.contains("Clean")
     }
-    .forEach {
+    def buildTasks = project.tasks.findAll {
+        it.name.startsWith("externalNative") && !it.name.contains("Clean")
+    }
+
+    buildTasks.forEach {
+        installBugsnagJNILibs.mustRunAfter(cleanTasks)
         it.dependsOn installBugsnagJNILibs
         it.doFirst {installBugsnagJNILibs}
     }
