@@ -5,6 +5,7 @@
 #ifndef BUGSNAG_NDK_H
 #define BUGSNAG_NDK_H
 
+#include <stdlib.h>
 #include <jni.h>
 #include <android/log.h>
 
