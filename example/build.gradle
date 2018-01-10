@@ -62,38 +62,6 @@ android {
             }
         }
     }
-
-}
-
-task installBugsnagJNILibs << {
-    def configs = project.configurations.findAll {
-        it.toString().contains('CompileClasspath')
-    }.each { config ->
-        def artifactFile = config.resolvedConfiguration.getFiles().find {
-            it.toString().contains("bugsnag-android-ndk")
-        }
-        if (artifactFile) {
-            copy {
-                from zipTree(artifactFile)
-                into file("${buildDir}/intermediates/bugsnag-libs")
-            }
-        }
-    }
-}
-
-project.afterEvaluate {
-    def cleanTasks = project.tasks.findAll {
-        it.name.startsWith("externalNative") && it.name.contains("Clean")
-    }
-    def buildTasks = project.tasks.findAll {
-        it.name.startsWith("externalNative") && !it.name.contains("Clean")
-    }
-
-    buildTasks.forEach {
-        installBugsnagJNILibs.mustRunAfter(cleanTasks)
-        it.dependsOn installBugsnagJNILibs
-        it.doFirst {installBugsnagJNILibs}
-    }
 }
 
 dependencies {
