@@ -1,7 +1,3 @@
-# Sets the minimum version of CMake required to build your native library.
-# This ensures that a certain set of CMake features is available to
-# your build.
-
 cmake_minimum_required(VERSION 3.4.1)
 
 # Specifies a library name, specifies whether the library is STATIC or
@@ -10,13 +6,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # and CMake builds them for you. When you build your app, Gradle
 # automatically packages shared libraries with your APK.
 
-add_library( # Specifies the name of the library.
-             jni-entry-point
-
-             # Sets the library as a shared library.
-             SHARED
-
-             # Provides a relative path to your source file(s).
+add_library(jni-entry-point SHARED
              "src/main/jni/jni entry point.c"
              src/main/jni/jni-entry-point.cpp)
 
@@ -27,3 +17,4 @@ set(BUGSNAG_INCLUDE_DIR ${BUGSNAG_LIB_DIR}/assets/include)
 set_target_properties(lib_bugsnag PROPERTIES IMPORTED_LOCATION
                       ${BUGSNAG_LIB_DIR}/jni/${ANDROID_ABI}/libbugsnag-ndk.so)
 target_include_directories(jni-entry-point PRIVATE ${BUGSNAG_INCLUDE_DIR})
+target_link_libraries(jni-entry-point lib_bugsnag)
