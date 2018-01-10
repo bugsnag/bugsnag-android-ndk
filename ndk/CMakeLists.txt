@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.4.1)
 # automatically packages shared libraries with your APK.
 
 add_library( # Specifies the name of the library.
-             libbugsnag-ndk
+             bugsnag-ndk
 
              # Sets the library as a shared library.
              SHARED
@@ -33,7 +33,7 @@ include_directories(
              )
 
 set(BUGSNAG_VERSION 1.0.1)
-target_include_directories(libbugsnag-ndk PRIVATE ${BUGSNAG_DIR}/assets/include)
+target_include_directories(bugsnag-ndk PRIVATE ${BUGSNAG_DIR}/assets/include)
 
 
 find_library( # Defines the name of the path variable that stores the
@@ -45,7 +45,7 @@ find_library( # Defines the name of the path variable that stores the
               log )
 
 target_link_libraries( # Specifies the target library.
-                     libbugsnag-ndk
+                     bugsnag-ndk
 
                      # Links the log library to the target library.
                      ${log-lib} )
