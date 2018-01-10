@@ -97,7 +97,7 @@ This process is a little ridiculous...
 -   Build and upload the new version
 
     ```shell
-    ./gradlew clean publish
+    ./gradlew clean assemble && ./gradlew publish
     ```
 
 -   "Promote" the release build on Maven Central

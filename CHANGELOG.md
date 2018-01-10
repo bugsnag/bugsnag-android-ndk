@@ -1,3 +1,7 @@
+## 1.1.0 (2018-01-10)
+
+* Add session tracking and update Android library
+
 ## 1.0.1 (2017-01-17)
 
 ### Bug Fixes
