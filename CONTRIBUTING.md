@@ -73,9 +73,7 @@ This process is a little ridiculous...
 -   Commit and tag the release
 
     ```shell
-    git commit -am "v1.x.x"
-    git tag v1.x.x
-    git push origin master && git push --tags
+    make VERSION=1.x.x publish
     ```
 
 ### 3. Release to Maven Central
