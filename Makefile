@@ -69,5 +69,8 @@ publish:
 ifeq ($(VERSION),)
 	@$(error VERSION is not defined. Run with `make VERSION=number publish`)
 endif
-	make VERSION=$(VERSION) bump && git commit -am "v$(VERSION)" && git tag v$(VERSION) \
-	&& git push origin && git push --tags && ./gradlew clean assemble uploadArchives bintrayUpload
+	@make VERSION=$(VERSION) bump
+	@git commit -am "Release v$(VERSION)"
+	@git tag v$(VERSION)
+	@git push origin master v$(VERSION)
+	@./gradlew clean assemble uploadArchives bintrayUpload

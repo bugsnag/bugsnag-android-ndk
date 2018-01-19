@@ -32,10 +32,10 @@ installed to `~/.android-sdk`.
 You can build new `.aar` files as follows:
 
 ```shell
-./gradlew clean :build
+./gradlew clean ndk:build
 ```
 
-Files are generated into`build/outputs/aar`.
+Files are generated into`ndk/build/outputs/aar`.
 
 ## Running the examples app
 
