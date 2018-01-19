@@ -1,4 +1,5 @@
 ## 1.1.0 (2018-01-18)
+## 1.1.1 (2018-01-18)
 
 * Move capture of thread stacktraces to start of notify process
 * Add configuration option to disable automatic breadcrumb capture
