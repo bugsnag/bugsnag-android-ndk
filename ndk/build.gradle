@@ -28,3 +28,5 @@ dependencies {
     api "com.android.support:support-annotations:$supportLibVersion"
     api "com.bugsnag:bugsnag-android:${project.BUGSNAG_ANDROID_VERSION}"
 }
+
+apply from: "../checkstyle.gradle"
