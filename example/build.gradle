@@ -76,3 +76,5 @@ bugsnag {
     retryCount 3
     ndk true
 }
+
+apply from: "../checkstyle.gradle"

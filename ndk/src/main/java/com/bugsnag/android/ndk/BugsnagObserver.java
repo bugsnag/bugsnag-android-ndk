@@ -9,24 +9,35 @@ import java.util.Observer;
  * Used to wait for changes happening in Bugsnag
  */
 public class BugsnagObserver implements Observer {
+
     static {
         System.loadLibrary("bugsnag-ndk");
     }
+
     public static native void setupBugsnag();
+
     public static native void populateErrorDetails();
+
     public static native void populateUserDetails();
+
     public static native void populateAppDetails();
+
     public static native void populateDeviceDetails();
+
     public static native void populateContextDetails();
+
     public static native void populateReleaseStagesDetails();
+
     public static native void populateFilterDetails();
+
     public static native void populateBreadcumbDetails();
+
     public static native void populateMetaDataDetails();
 
     private boolean ndkInitialized = false;
 
     @Override
-    public void update(Observable o, Object arg) {
+    public void update(Observable observable, Object arg) {
         if (!ndkInitialized) {
             setupBugsnag();
             ndkInitialized = true;
