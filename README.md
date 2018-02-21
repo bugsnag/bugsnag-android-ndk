@@ -1,5 +1,5 @@
 # Bugsnag exception reporter for Android NDK
-[NDK Crash Reporting](https://www.bugsnag.com/platforms/android/) with Bugsnag helps you detect crashes from native Android C & C++ code, so you can fix issues impacting your users. 
+[Android NDK Crash Reporting](https://www.bugsnag.com/platforms/android/) with Bugsnag helps you detect crashes from native Android C & C++ code, so you can fix issues impacting your users. 
 
 [![Documentation](https://img.shields.io/badge/documentation-1.1.2-blue.svg)](http://docs.bugsnag.com/platforms/android/ndk/)
 
@@ -14,7 +14,7 @@
 
 ## Getting started
 
-1. [Create a Bugsnag account](https://bugsnag.com)
+1. [Create a Bugsnag account](https://www.bugsnag.com)
 1. Complete the instructions in the [integration guide](https://docs.bugsnag.com/platforms/android/ndk) to report crashes from your app
 1. Report handled errors using [`bugsnag_notify()`](https://docs.bugsnag.com/android/ndk/#reporting-handled-errors)
 1. Customize your integration using the [configuration options](http://docs.bugsnag.com/platforms/android/ndk/configuration-options/)
