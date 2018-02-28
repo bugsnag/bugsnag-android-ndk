@@ -814,9 +814,11 @@ void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
                 const char* key = (*env)->GetStringUTFChars(env, key_str, JNI_FALSE);
 
                 jstring value_str = bsg_get_item_from_map(env, meta_data_value, key_str);
-                const char* value = (*env)->GetStringUTFChars(env, value_str, JNI_FALSE);
 
-                bugsnag_object_set_string(json_value_get_object(crumb->metadata), key, value);
+                if (value_str != NULL) {
+                    const char* value = (*env)->GetStringUTFChars(env, value_str, JNI_FALSE);
+                    bugsnag_object_set_string(json_value_get_object(crumb->metadata), key, value);
+                }
 
                 (*env)->DeleteLocalRef(env, key_str);
                 (*env)->DeleteLocalRef(env, value_str);

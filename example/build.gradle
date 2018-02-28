@@ -5,6 +5,14 @@ repositories {
     google()
 }
 
+allprojects {
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+}
+
 android {
     compileSdkVersion Integer.parseInt(project.ANDROID_COMPILE_SDK_VERSION)
     buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
@@ -68,6 +76,7 @@ dependencies {
     implementation "com.android.support:support-annotations:$supportLibVersion"
     implementation "com.bugsnag:bugsnag-android-ndk:1.1.2"
     implementation "com.bugsnag:bugsnag-android:4.2.2"
+//    compile (name: "ndk-release", ext: "aar")
 }
 
 apply plugin: 'com.bugsnag.android.gradle'
