@@ -77,6 +77,20 @@ dependencies {
     implementation "com.bugsnag:bugsnag-android-ndk:1.1.2"
     implementation "com.bugsnag:bugsnag-android:4.2.2"
 //    compile (name: "ndk-release", ext: "aar")
+
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
+    implementation 'io.reactivex.rxjava2:rxjava:2.1.10'
+
+
+    androidTestImplementation "com.android.support.test:runner:$supportTestVersion", {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
+    androidTestImplementation "com.android.support.test:rules:$supportTestVersion", {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
+    androidTestImplementation "com.android.support.test.espresso:espresso-core:$espressoVersion", {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    }
 }
 
 apply plugin: 'com.bugsnag.android.gradle'

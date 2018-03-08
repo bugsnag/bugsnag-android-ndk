@@ -12,6 +12,10 @@ import android.widget.Button;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 
 
 public class MainActivity extends Activity {
@@ -244,5 +248,18 @@ public class MainActivity extends Activity {
             }
         });
 
+    }
+
+    public void leaveBreadcrumb() {
+        Observable.fromCallable(
+                new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        Bugsnag.leaveBreadcrumb("some non-null value" + "some other non-null value");
+                        return null;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .subscribe();
     }
 }
