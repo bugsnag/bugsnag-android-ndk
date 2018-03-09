@@ -13,9 +13,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 
-import io.reactivex.Observable;
-import io.reactivex.schedulers.Schedulers;
+import rx.Observable;
+import rx.schedulers.Schedulers;
 
 
 public class MainActivity extends Activity {
@@ -57,7 +58,7 @@ public class MainActivity extends Activity {
 
         Bugsnag.init(this);
 
-        Bugsnag.setFilters("KeyString","intArrayKey");
+        Bugsnag.setFilters("KeyString", "intArrayKey");
         Bugsnag.setNotifyReleaseStages("production", "development");
 
         MetaData metaData = Bugsnag.getMetaData();
@@ -74,8 +75,8 @@ public class MainActivity extends Activity {
         Map<String, Object> mapValue = new HashMap<>();
         mapValue.put("KeyString1", "StringValue1");
         mapValue.put("KeyInt1", 12345);
-        mapValue.put("KeyIntArray", new int[] {4,6,1});
-        mapValue.put("KeyObjArray", new Object[] {"StringValue3", 12346F, true});
+        mapValue.put("KeyIntArray", new int[]{4, 6, 1});
+        mapValue.put("KeyObjArray", new Object[]{"StringValue3", 12346F, true});
 
         Map<Object, Object> submapValue = new HashMap<>();
         submapValue.put(34343, 123456);
@@ -84,37 +85,37 @@ public class MainActivity extends Activity {
         metaData.addToTab("tab1", "mapKey", mapValue);
 
 
-        metaData.addToTab("tab1", "shortArrayKey", new short[] {1,2,1});
-        metaData.addToTab("tab1", "intArrayKey", new int[] {4,6,1});
-        metaData.addToTab("tab1", "doubleArrayKey", new double[] {4.4,6,1});
-        metaData.addToTab("tab1", "floatArrayKey", new float[] {4.5F,6,1});
-        metaData.addToTab("tab1", "longArrayKey", new long[] {4,6,1});
-        metaData.addToTab("tab1", "byteArrayKey", new byte[] {4,6,1});
-        metaData.addToTab("tab1", "boolArrayKey", new boolean[] {false,true,false});
-        metaData.addToTab("tab1", "charArrayKey", new char[] {'a','b','c'});
+        metaData.addToTab("tab1", "shortArrayKey", new short[]{1, 2, 1});
+        metaData.addToTab("tab1", "intArrayKey", new int[]{4, 6, 1});
+        metaData.addToTab("tab1", "doubleArrayKey", new double[]{4.4, 6, 1});
+        metaData.addToTab("tab1", "floatArrayKey", new float[]{4.5F, 6, 1});
+        metaData.addToTab("tab1", "longArrayKey", new long[]{4, 6, 1});
+        metaData.addToTab("tab1", "byteArrayKey", new byte[]{4, 6, 1});
+        metaData.addToTab("tab1", "boolArrayKey", new boolean[]{false, true, false});
+        metaData.addToTab("tab1", "charArrayKey", new char[]{'a', 'b', 'c'});
 
-        metaData.addToTab("tab1", "shortObjArrayKey", new Short[] {1,2,1});
-        metaData.addToTab("tab1", "intObjArrayKey", new Integer[] {4,6,1});
-        metaData.addToTab("tab1", "doubleObjArrayKey", new Double[] {4.4,6.4,1.3});
-        metaData.addToTab("tab1", "floatObjArrayKey", new Float[] {4.5F,6.0F,1.0F});
-        metaData.addToTab("tab1", "longObjArrayKey", new Long[] {4L,6L,1L});
-        metaData.addToTab("tab1", "byteObjArrayKey", new Byte[] {4,6,1});
-        metaData.addToTab("tab1", "boolObjArrayKey", new Boolean[] {false,true,false});
-        metaData.addToTab("tab1", "charObjArrayKey", new Character[] {'a','b','c'});
+        metaData.addToTab("tab1", "shortObjArrayKey", new Short[]{1, 2, 1});
+        metaData.addToTab("tab1", "intObjArrayKey", new Integer[]{4, 6, 1});
+        metaData.addToTab("tab1", "doubleObjArrayKey", new Double[]{4.4, 6.4, 1.3});
+        metaData.addToTab("tab1", "floatObjArrayKey", new Float[]{4.5F, 6.0F, 1.0F});
+        metaData.addToTab("tab1", "longObjArrayKey", new Long[]{4L, 6L, 1L});
+        metaData.addToTab("tab1", "byteObjArrayKey", new Byte[]{4, 6, 1});
+        metaData.addToTab("tab1", "boolObjArrayKey", new Boolean[]{false, true, false});
+        metaData.addToTab("tab1", "charObjArrayKey", new Character[]{'a', 'b', 'c'});
 
-        metaData.addToTab("tab1", "shortObjListKey", Arrays.asList((short)1,(short)2,(short)1));
-        metaData.addToTab("tab1", "intObjListKey", Arrays.asList(4,6,1));
-        metaData.addToTab("tab1", "doubleObjListKey", Arrays.asList(4.4,6.4,1.3));
-        metaData.addToTab("tab1", "floatObjListKey", Arrays.asList(4.5F,6.0F,1.0F));
-        metaData.addToTab("tab1", "longObjListKey", Arrays.asList(4L,6L,1L));
-        metaData.addToTab("tab1", "byteObjListKey", Arrays.asList((byte)4,(byte)6,(byte)1));
-        metaData.addToTab("tab1", "boolObjListKey", Arrays.asList(false,true,false));
-        metaData.addToTab("tab1", "charObjListKey", Arrays.asList('a','b','c'));
+        metaData.addToTab("tab1", "shortObjListKey", Arrays.asList((short) 1, (short) 2, (short) 1));
+        metaData.addToTab("tab1", "intObjListKey", Arrays.asList(4, 6, 1));
+        metaData.addToTab("tab1", "doubleObjListKey", Arrays.asList(4.4, 6.4, 1.3));
+        metaData.addToTab("tab1", "floatObjListKey", Arrays.asList(4.5F, 6.0F, 1.0F));
+        metaData.addToTab("tab1", "longObjListKey", Arrays.asList(4L, 6L, 1L));
+        metaData.addToTab("tab1", "byteObjListKey", Arrays.asList((byte) 4, (byte) 6, (byte) 1));
+        metaData.addToTab("tab1", "boolObjListKey", Arrays.asList(false, true, false));
+        metaData.addToTab("tab1", "charObjListKey", Arrays.asList('a', 'b', 'c'));
         metaData.addToTab("tab1", "ObjectListKey", Arrays.asList("StringValue3", 12346F, true));
 
 
-        metaData.addToTab("tab1", "stringArrayKey", new String[] {"string1", "string2", "string3"});
-        metaData.addToTab("tab1", "objArrayKey", new Object[] {"StringValue3", 12346F, true});
+        metaData.addToTab("tab1", "stringArrayKey", new String[]{"string1", "string2", "string3"});
+        metaData.addToTab("tab1", "objArrayKey", new Object[]{"StringValue3", 12346F, true});
 
         Map<String, Object> submapValue2 = new HashMap<>();
         submapValue2.put("KeyString2", "StringValue2");
@@ -126,7 +127,6 @@ public class MainActivity extends Activity {
 
         metaData.addToTab("tab2", "Key1", "StringValue2");
         metaData.addToTab("tab2", "Key2", 345);
-
 
 
         Map<String, String> values = new HashMap<>();
@@ -144,7 +144,7 @@ public class MainActivity extends Activity {
         Bugsnag.setUser("123456", "james@example.com", "James Smith");
 
         Button clickButton = (Button) findViewById(R.id.notifyButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 nativeNotify();
@@ -152,7 +152,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.fpeButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeFpe();
@@ -160,7 +160,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.npeButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeNpe();
@@ -168,7 +168,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.busButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeBus();
@@ -176,7 +176,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.abortButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeAbort();
@@ -184,7 +184,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.trapButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeTrap();
@@ -192,7 +192,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.illButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeIll();
@@ -201,7 +201,7 @@ public class MainActivity extends Activity {
 
 
         clickButton = (Button) findViewById(R.id.cppFpeButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppFpe();
@@ -209,7 +209,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.cppNpeButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppNpe();
@@ -217,7 +217,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.cppBusButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppBus();
@@ -225,7 +225,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.cppAbortButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppAbort();
@@ -233,7 +233,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.cppTrapButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppTrap();
@@ -241,7 +241,7 @@ public class MainActivity extends Activity {
         });
 
         clickButton = (Button) findViewById(R.id.cppIllButton);
-        clickButton.setOnClickListener( new View.OnClickListener() {
+        clickButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 causeCppIll();
@@ -251,15 +251,17 @@ public class MainActivity extends Activity {
     }
 
     public void leaveBreadcrumb() {
-        Observable.fromCallable(
-                new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        Bugsnag.leaveBreadcrumb("some non-null value" + "some other non-null value");
-                        return null;
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe();
+        for (int k = 0; k < 100; k++) {
+            Observable.fromCallable(
+                    new Callable<Void>() {
+                        @Override
+                        public Void call() throws Exception {
+                            Bugsnag.leaveBreadcrumb("some non-null value" + "some other non-null value");
+                            return null;
+                        }
+                    })
+                    .subscribeOn(Schedulers.io())
+                    .subscribe();
+        }
     }
 }

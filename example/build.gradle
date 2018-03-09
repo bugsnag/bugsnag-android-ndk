@@ -78,8 +78,11 @@ dependencies {
     implementation "com.bugsnag:bugsnag-android:4.2.2"
 //    compile (name: "ndk-release", ext: "aar")
 
-    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
-    implementation 'io.reactivex.rxjava2:rxjava:2.1.10'
+//    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
+//    implementation 'io.reactivex.rxjava2:rxjava:2.1.10'
+
+    implementation 'io.reactivex:rxandroid:1.2.1'
+    implementation 'io.reactivex:rxjava:1.1.6'
 
 
     androidTestImplementation "com.android.support.test:runner:$supportTestVersion", {
