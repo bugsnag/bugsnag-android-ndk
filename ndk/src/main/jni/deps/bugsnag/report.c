@@ -101,8 +101,6 @@ void bugsnag_event_add_breadcrumb(bsg_event *event, bsg_breadcrumb *crumb) {
     json_value_free(old_crumb->metadata);
     free(old_crumb);
     for (int i = 0; i < length - 1; i++) {
-      bsg_breadcrumb *crumb1 = event->breadcrumbs[i];
-      bsg_breadcrumb *crumb2 = event->breadcrumbs[i + 1];
       event->breadcrumbs[i] = event->breadcrumbs[i + 1];
     }
     event->breadcrumbs[length - 1] = crumb;
