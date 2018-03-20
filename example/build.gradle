@@ -74,9 +74,7 @@ android {
 
 dependencies {
     implementation "com.android.support:support-annotations:$supportLibVersion"
-    implementation "com.bugsnag:bugsnag-android-ndk:1.1.2"
-    implementation "com.bugsnag:bugsnag-android:4.2.2"
-//    compile (name: "ndk-release", ext: "aar")
+    compile "com.bugsnag:bugsnag-android-ndk:1.1.2"
 }
 
 apply plugin: 'com.bugsnag.android.gradle'
