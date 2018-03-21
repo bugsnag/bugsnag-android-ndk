@@ -19,7 +19,6 @@ ext {
 
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
-apply plugin: 'signing'
 
 
 def target = 'ndk/build/outputs/aar/ndk-release.aar'
@@ -36,11 +35,15 @@ model {
     }
 }
 
-signing {
-    if (file(target).exists())
-        sign file(target)
-    if (file(pomPath).exists())
-        sign file(pomPath)
+if (project.hasProperty("releasing")) {
+    apply plugin: 'signing'
+
+    signing {
+        if (file(target).exists())
+            sign file(target)
+        if (file(pomPath).exists())
+            sign file(pomPath)
+    }
 }
 
 publishing {
