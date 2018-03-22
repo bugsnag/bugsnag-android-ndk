@@ -34,4 +34,4 @@ endif
 	@git commit -am "Release v$(VERSION)"
 	@git tag v$(VERSION)
 	@git push origin master v$(VERSION)
-	@./gradlew clean assemble uploadArchives bintrayUpload
+	@./gradlew clean assemble uploadArchives bintrayUpload -Preleasing=true
