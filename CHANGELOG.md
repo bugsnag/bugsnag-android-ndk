@@ -1,3 +1,29 @@
+## 1.1.3 (2018-04-16)
+
+### Bug fixes
+
+* Add nullcheck for reading breadcrumb metadata values [#9](https://github.com/bugsnag/bugsnag-android-ndk/pull/9)
+[Jamie Lynch](https://github.com/fractalwrench)
+
+* Enable checkstyle on repository [#11](https://github.com/bugsnag/bugsnag-android-ndk/pull/11)
+[Jamie Lynch](https://github.com/fractalwrench) 
+
+* Update bugsnag-android dependency version to v4.3.1:
+
+* Fix possible ANR when enabling session tracking via
+  `Bugsnag.setAutoCaptureSessions()` and connecting to latent networks.
+  [#231](https://github.com/bugsnag/bugsnag-android/pull/231)
+
+* Fix invalid payloads being sent when processing multiple Bugsnag events in the
+  same millisecond
+  [#235](https://github.com/bugsnag/bugsnag-android/pull/235)
+
+* Re-add API key to error report HTTP request body to preserve backwards
+  compatibility with older versions of the error reporting API
+  [#228](https://github.com/bugsnag/bugsnag-android/pull/228)
+
+
+
 ## 1.1.2 (2018-01-19)
 
 ### Bug fixes
