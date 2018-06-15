@@ -19,6 +19,11 @@ android {
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a', 'armeabi', 'x86', 'x86_64'
         }
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     externalNativeBuild {
