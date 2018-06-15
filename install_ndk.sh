@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export OS_VERSION='darwin-x86_64'
-export NDK_VERSION='r16b'
+export NDK_VERSION='r15c'
 
 echo "Downloading NDK, this will take a while..."
 wget -q https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-${OS_VERSION}.zip
