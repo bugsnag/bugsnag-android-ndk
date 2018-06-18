@@ -1,3 +1,16 @@
+## 1.2.0 (2018-06-18)
+
+**IMPORTANT NOTE**: this release alters the behaviour of the notifier to track sessions automatically. 
+  A session will be automatically captured on each app launch and sent to [https://sessions.bugsnag.com](https://sessions.bugsnag.com). If you
+  use Bugsnag On-Premise, it is now also recommended that you set your notify and session endpoints
+  via `config.setEndpoints(String notify, String sessions)`.
+  
+* Update bugsnag-android dependency version to v4.5.0:
+
+  * Enable automatic session tracking by default [#314](https://github.com/bugsnag/bugsnag-android/pull/314)
+
+  * Build bugsnag-android-ndk project with r16b [#20](https://github.com/bugsnag/bugsnag-android-ndk/pull/20)
+
 ## 1.1.3 (2018-04-16)
 
 ### Bug fixes

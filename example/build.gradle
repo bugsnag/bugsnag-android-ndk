@@ -1,8 +1,8 @@
 apply plugin: 'com.android.application'
 
 repositories {
-    jcenter()
     google()
+    jcenter()
 }
 
 allprojects {
@@ -66,7 +66,7 @@ android {
         }
         arm {
             ndk {
-                abiFilters "armeabi-v7a", "armeabi"
+                abiFilters "armeabi-v7a"
             }
         }
     }
