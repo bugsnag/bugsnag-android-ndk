@@ -1,4 +1,4 @@
-## 1.2.0 (2018-04-16)
+## 1.2.0 (2018-06-18)
 
 **IMPORTANT NOTE**: this release alters the behaviour of the notifier to track sessions automatically. 
   A session will be automatically captured on each app launch and sent to [https://sessions.bugsnag.com](https://sessions.bugsnag.com). If you
