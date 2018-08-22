@@ -8,6 +8,7 @@ android:
     - tools
     - platform-tools
     - build-tools-27.0.0
+    - android-16
     - android-19
     - android-21
     - android-27
@@ -32,6 +33,7 @@ before_install:
 
 env:
   matrix:
+    - ANDROID_TARGET=android-16 ANDROID_ABI=armeabi-v7a
     - ANDROID_TARGET=android-19 ANDROID_ABI=armeabi-v7a
     - ANDROID_TARGET=android-21 ANDROID_ABI=armeabi-v7a
 
