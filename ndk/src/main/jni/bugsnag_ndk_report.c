@@ -774,9 +774,6 @@ time_t bsg_get_time_from_string(const char* time_details) {
  * Gets the breadcrumbs from the client class and pre-populates the bugsnag error
  */
 void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
-    // Clear out existing breadcrumbs
-    bugsnag_event_clear_breadcrumbs(event);
-
     jclass interface_class = (*env)->FindClass(env, "com/bugsnag/android/NativeInterface");
 
     jmethodID get_breadcrumbs_method = (*env)->GetStaticMethodID(env, interface_class, "getBreadcrumbs", "()[Ljava/lang/Object;");
@@ -791,47 +788,49 @@ void bsg_populate_breadcrumbs(JNIEnv *env, bsg_event *event) {
     // loop over all the items in the map and add them
     int size = (*env)->GetArrayLength(env, breadcrumbs_value);
 
-    for (int i = 0; i < size; i++) {
-        jobject breadcrumb = (*env)->GetObjectArrayElement(env, breadcrumbs_value, i);
+    int i = size - 1; // pick last breadcrumb
 
-        const char * timestamp = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, timestamp_field));
-        const char * name = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, name_field));
-        jobject breadcrumb_type = (*env)->GetObjectField(env, breadcrumb, type_field);
-        jobject meta_data_value = (*env)->GetObjectField(env, breadcrumb, meta_data_field);
-
-        bsg_breadcrumb *crumb =
-                bugsnag_breadcrumb_init((char *)name, bsg_get_breadcrumb_type(env, breadcrumb_type));
-        crumb->timestamp = bsg_get_time_from_string(timestamp);
-
-        int meta_size = bsg_get_map_size(env, meta_data_value);
-
-        if (meta_size > 0) {
-            jarray key_array_value = bsg_get_map_key_array(env, meta_data_value);
-
-            int j;
-            for (j = 0; j < meta_size; j++) {
-                jstring key_str = (*env)->GetObjectArrayElement(env, key_array_value, j);
-                const char* key = (*env)->GetStringUTFChars(env, key_str, JNI_FALSE);
-
-                jstring value_str = bsg_get_item_from_map(env, meta_data_value, key_str);
-
-                if (value_str != NULL) {
-                    const char* value = (*env)->GetStringUTFChars(env, value_str, JNI_FALSE);
-                    bugsnag_object_set_string(json_value_get_object(crumb->metadata), key, value);
-                }
-
-                (*env)->DeleteLocalRef(env, key_str);
-                (*env)->DeleteLocalRef(env, value_str);
-            }
-
-            (*env)->DeleteLocalRef(env, key_array_value);
-        }
-
-        bugsnag_event_add_breadcrumb(event, crumb);
-
-        (*env)->DeleteLocalRef(env, breadcrumb);
+    if (i < 0) {
+        return;
     }
 
+    jobject breadcrumb = (*env)->GetObjectArrayElement(env, breadcrumbs_value, i);
+
+    const char * timestamp = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, timestamp_field));
+    const char * name = bsg_get_meta_data_string(env, (*env)->GetObjectField(env, breadcrumb, name_field));
+    jobject breadcrumb_type = (*env)->GetObjectField(env, breadcrumb, type_field);
+    jobject meta_data_value = (*env)->GetObjectField(env, breadcrumb, meta_data_field);
+
+    bsg_breadcrumb *crumb =
+            bugsnag_breadcrumb_init((char *)name, bsg_get_breadcrumb_type(env, breadcrumb_type));
+    crumb->timestamp = bsg_get_time_from_string(timestamp);
+
+    int meta_size = bsg_get_map_size(env, meta_data_value);
+
+    if (meta_size > 0) {
+        jarray key_array_value = bsg_get_map_key_array(env, meta_data_value);
+
+        for (int j = 0; j < meta_size; j++) {
+            jstring key_str = (*env)->GetObjectArrayElement(env, key_array_value, j);
+            const char* key = (*env)->GetStringUTFChars(env, key_str, JNI_FALSE);
+
+            jstring value_str = bsg_get_item_from_map(env, meta_data_value, key_str);
+
+            if (value_str != NULL) {
+                const char* value = (*env)->GetStringUTFChars(env, value_str, JNI_FALSE);
+                bugsnag_object_set_string(json_value_get_object(crumb->metadata), key, value);
+            }
+
+            (*env)->DeleteLocalRef(env, key_str);
+            (*env)->DeleteLocalRef(env, value_str);
+        }
+
+        (*env)->DeleteLocalRef(env, key_array_value);
+    }
+
+    bugsnag_event_add_breadcrumb(event, crumb);
+
+    (*env)->DeleteLocalRef(env, breadcrumb);
 
     (*env)->DeleteLocalRef(env, breadcrumbs_value);
     (*env)->DeleteLocalRef(env, interface_class);
